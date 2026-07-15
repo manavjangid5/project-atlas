@@ -1,0 +1,53 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Environment variables (NEVER commit secrets)
+.env
+.env.local
+.env.*.local
+apps/backend/.env
+apps/frontend/.env
+apps/worker/.env
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+
+# Prisma
+apps/backend/prisma/dev.db
+apps/backend/prisma/migrations/dev.db
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Testing
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+
+# Editor / OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+
+# TypeScript build info
+*.tsbuildinfo
+
+# Docker
+docker-compose.override.yml
+
+# Misc
+.turbo/
+.cache/
+*.pem

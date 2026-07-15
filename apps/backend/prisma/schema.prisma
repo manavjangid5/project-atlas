@@ -1,0 +1,144 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  DEVELOPER
+  VIEWER
+}
+
+model Organization {
+  id          String       @id @default(cuid())
+  name        String
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  members     Membership[]
+  workflows   Workflow[]
+  auditLogs   AuditLog[]
+  invitations Invitation[]
+}
+model RefreshToken {
+  id          String    @id @default(cuid())
+  user        User      @relation(fields: [userId], references: [id])
+  userId      String
+  tokenHash   String    @unique   // sha256 of the actual refresh token, never store raw
+  family      String              // groups rotated tokens together for reuse detection
+  revokedAt   DateTime?
+  replacedBy  String?
+  expiresAt   DateTime
+  createdAt   DateTime  @default(now())
+
+  @@index([userId])
+}
+model User {
+  id            String       @id @default(cuid())
+  email         String       @unique
+  passwordHash  String?
+  googleId      String?      @unique
+  githubId      String?      @unique
+  name          String?
+  createdAt     DateTime     @default(now())
+  memberships   Membership[]
+  auditLogs     AuditLog[]
+  refreshTokens RefreshToken[]
+}
+
+model Membership {
+  id             String       @id @default(cuid())
+  role           Role
+  user           User         @relation(fields: [userId], references: [id])
+  userId         String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  createdAt      DateTime     @default(now())
+
+  @@unique([userId, organizationId])
+  @@index([organizationId])
+}
+
+model Workflow {
+  id             String            @id @default(cuid())
+  name           String
+  graph          Json              // nodes + edges
+  isActive       Boolean           @default(true)
+  organization   Organization      @relation(fields: [organizationId], references: [id])
+  organizationId String
+  versions       WorkflowVersion[]
+  runs           ExecutionRun[]
+  deletedAt      DateTime?         // soft delete
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@index([organizationId])
+}
+
+model WorkflowVersion {
+  id         String   @id @default(cuid())
+  workflow   Workflow @relation(fields: [workflowId], references: [id])
+  workflowId String
+  graph      Json
+  version    Int
+  createdAt  DateTime @default(now())
+
+  @@index([workflowId])
+}
+
+model ExecutionRun {
+  id         String    @id @default(cuid())
+  workflow   Workflow  @relation(fields: [workflowId], references: [id])
+  workflowId String
+  status     String    // PENDING | RUNNING | SUCCESS | FAILED | PARTIAL
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+  logs       ExecutionLog[]
+
+  @@index([workflowId])
+}
+
+model ExecutionLog {
+  id        String       @id @default(cuid())
+  run       ExecutionRun @relation(fields: [runId], references: [id])
+  runId     String
+  nodeId    String
+  status    String
+  message   String?
+  createdAt DateTime     @default(now())
+
+  @@index([runId])
+}
+
+model AuditLog {
+  id             String        @id @default(cuid())
+  action         String
+  user           User?         @relation(fields: [userId], references: [id])
+  userId         String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  organizationId String?
+  metadata       Json?
+  createdAt      DateTime      @default(now())
+
+  @@index([organizationId])
+}
+
+model Invitation {
+  id             String       @id @default(cuid())
+  email          String
+  role           Role
+  token          String       @unique
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  invitedBy      String
+  acceptedAt     DateTime?
+  expiresAt      DateTime
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId])
+  @@index([email])
+}
