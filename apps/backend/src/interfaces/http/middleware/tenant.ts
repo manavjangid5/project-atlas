@@ -1,20 +1,10 @@
-import { Response, NextFunction } from "express";
+import { Request, Response, NextFunction } from "express";
 import { prisma } from "../../../infrastructure/database/prismaClient";
-import { AuthedRequest } from "./auth";
 import { AppError } from "./errorHandler";
 
-export interface TenantRequest extends AuthedRequest {
-  tenant?: { organizationId: string; role: string };
-}
+export type TenantRequest = Request;
 
-// Reads organizationId from header (or query param as fallback) and
-// verifies the authenticated user is actually a member — this is the
-// single choke point that guarantees cross-tenant data leaks can't happen.
-export async function requireTenant(
-  req: TenantRequest,
-  res: Response,
-  next: NextFunction
-) {
+export async function requireTenant(req: Request, res: Response, next: NextFunction) {
   const organizationId =
     (req.headers["x-organization-id"] as string) || (req.query.organizationId as string);
 
@@ -38,7 +28,7 @@ export async function requireTenant(
 }
 
 export function requireTenantRole(...roles: string[]) {
-  return (req: TenantRequest, res: Response, next: NextFunction) => {
+  return (req: Request, res: Response, next: NextFunction) => {
     if (!req.tenant?.role || !roles.includes(req.tenant.role)) {
       throw new AppError(403, "Insufficient permissions for this action");
     }
