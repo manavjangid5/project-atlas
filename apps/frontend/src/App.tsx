@@ -6,7 +6,7 @@ import FormsPage from "./features/forms/FormsPage";
 import AnalyticsPage from "./features/analytics/AnalyticsPage";
 import MembersPage from "./features/organizations/MembersPage";
 import SettingsPage from "./features/settings/SettingsPage";
-
+import AuditLogPage from "./features/audit/AuditLogPage";
 export default function App() {
   return (
     <BrowserRouter>
@@ -19,6 +19,7 @@ export default function App() {
           <Route path="analytics" element={<AnalyticsPage />} />
           <Route path="members" element={<MembersPage />} />
           <Route path="settings" element={<SettingsPage />} />
+          <Route path="audit" element={<AuditLogPage />} />
         </Route>
         <Route path="/" element={<Navigate to="/dashboard" />} />
       </Routes>

@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { label: "Analytics", path: "/dashboard/analytics" },
   { label: "Members", path: "/dashboard/members" },
   { label: "Settings", path: "/dashboard/settings" },
+  { label: "Audit Log", path: "/dashboard/audit" },
 ];
 
 export default function DashboardLayout() {

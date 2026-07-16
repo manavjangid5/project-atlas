@@ -23,6 +23,7 @@ model Organization {
   workflows   Workflow[]
   auditLogs   AuditLog[]
   invitations Invitation[]
+  formSchemas FormSchema[]
 }
 model RefreshToken {
   id          String    @id @default(cuid())
@@ -141,4 +142,27 @@ model Invitation {
 
   @@index([organizationId])
   @@index([email])
+}
+model FormSchema {
+  id             String       @id @default(cuid())
+  name           String
+  fields         Json         // array of field definitions
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  submissions    FormSubmission[]
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([organizationId])
+}
+
+model FormSubmission {
+  id           String     @id @default(cuid())
+  form         FormSchema @relation(fields: [formId], references: [id])
+  formId       String
+  data         Json
+  submittedBy  String?
+  createdAt    DateTime   @default(now())
+
+  @@index([formId])
 }
