@@ -1,5 +1,5 @@
 import { prisma } from "../infrastructure/database/prismaClient";
-import { producer, ensureProducerConnected, EXECUTION_TOPIC } from "../infrastructure/kafka/kafkaClient";
+import { publishMessage } from "../infrastructure/rabbitmq/rabbitmqClient";
 import { AppError } from "../interfaces/http/middleware/errorHandler";
 import type { Prisma } from "@prisma/client";
 
@@ -79,21 +79,12 @@ export async function triggerWorkflowRun(organizationId: string, workflowId: str
     data: { workflowId: workflow.id, status: "PENDING" },
   });
 
-  await ensureProducerConnected();
-  await producer.send({
-    topic: EXECUTION_TOPIC,
-    messages: [
-      {
-        key: run.id,
-        value: JSON.stringify({
-          runId: run.id,
-          workflowId: workflow.id,
-          organizationId,
-          graph: workflow.graph,
-        }),
-      },
-    ],
-  });
+  await publishMessage({
+  runId: run.id,
+  workflowId: workflow.id,
+  organizationId,
+  graph: workflow.graph,
+});
 
   return run;
 }

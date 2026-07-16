@@ -4,7 +4,7 @@ import helmet from "helmet";
 import morgan from "morgan";
 import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
-
+dotenv.config();
 import healthRouter from "./interfaces/http/routes/health";
 import { errorHandler } from "./interfaces/http/middleware/errorHandler";
 
@@ -12,7 +12,7 @@ import passport from "./infrastructure/auth/passport";
 import authRouter from "./interfaces/http/routes/auth";
 import organizationsRouter from "./interfaces/http/routes/organizations";
 import workflowsRouter from "./interfaces/http/routes/workflows";
-dotenv.config();
+
 
 const app = express();
 
