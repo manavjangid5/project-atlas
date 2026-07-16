@@ -2,6 +2,7 @@ import { prisma } from "../infrastructure/database/prismaClient";
 import { publishMessage } from "../infrastructure/rabbitmq/rabbitmqClient";
 import { AppError } from "../interfaces/http/middleware/errorHandler";
 import type { Prisma } from "@prisma/client";
+import { logAudit } from "../infrastructure/audit/auditLogger";
 
 export async function listWorkflows(organizationId: string) {
   return prisma.workflow.findMany({
@@ -52,7 +53,11 @@ export async function updateWorkflowGraph(
         version: nextVersion,
       },
     });
-
+await logAudit({
+    action: "WORKFLOW_UPDATED",
+    organizationId,
+    metadata: { workflowId: id },
+  });
     return tx.workflow.update({
       where: { id: workflow.id },
       data: { graph: graph as Prisma.InputJsonValue },
@@ -85,7 +90,11 @@ export async function triggerWorkflowRun(organizationId: string, workflowId: str
   organizationId,
   graph: workflow.graph,
 });
-
+ await logAudit({
+    action: "WORKFLOW_EXECUTED",
+    organizationId,
+    metadata: { workflowId: workflow.id, runId: run.id },
+  });
   return run;
 }
 

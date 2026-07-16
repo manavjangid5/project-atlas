@@ -8,6 +8,7 @@ import {
   refreshTokenExpiry,
 } from "../infrastructure/auth/tokens";
 import { AppError } from "../interfaces/http/middleware/errorHandler";
+import { logAudit } from "../infrastructure/audit/auditLogger";
 
 async function issueTokenPair(userId: string, email: string, family?: string) {
   const tokenFamily = family || crypto.randomUUID();
@@ -42,6 +43,8 @@ export async function login(email: string, password: string) {
 
   const valid = await bcrypt.compare(password, user.passwordHash);
   if (!valid) throw new AppError(401, "Invalid credentials");
+
+  await logAudit({ action: "USER_LOGIN", userId: user.id, metadata: { method: "password" } });
 
   return issueTokenPair(user.id, user.email);
 }
@@ -113,5 +116,10 @@ export async function findOrCreateOAuthUser(params: {
       });
     }
   }
+  await logAudit({
+    action: "USER_LOGIN",
+    userId: user.id,
+    metadata: { method: params.provider },
+  });
   return issueTokenPair(user.id, user.email);
 }

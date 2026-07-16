@@ -12,6 +12,7 @@ import passport from "./infrastructure/auth/passport";
 import authRouter from "./interfaces/http/routes/auth";
 import organizationsRouter from "./interfaces/http/routes/organizations";
 import workflowsRouter from "./interfaces/http/routes/workflows";
+import auditRouter from "./interfaces/http/routes/audit";
 
 
 const app = express();
@@ -29,6 +30,7 @@ app.use(passport.initialize());
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1", organizationsRouter);
 app.use("/api/v1", workflowsRouter);
+app.use("/api/v1", auditRouter);
 
 const PORT = process.env.PORT || 4000;
 

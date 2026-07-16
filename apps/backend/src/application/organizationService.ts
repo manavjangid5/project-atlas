@@ -1,7 +1,7 @@
 import crypto from "crypto";
 import { prisma } from "../infrastructure/database/prismaClient";
 import { AppError } from "../interfaces/http/middleware/errorHandler";
-
+import { logAudit } from "../infrastructure/audit/auditLogger";
 export async function createOrganization(userId: string, name: string) {
   return prisma.$transaction(async (tx) => {
     const org = await tx.organization.create({ data: { name } });
@@ -67,6 +67,12 @@ export async function updateMemberRole(
   targetUserId: string,
   newRole: "ADMIN" | "DEVELOPER" | "VIEWER" | "OWNER"
 ) {
+  await logAudit({
+    action: "ROLE_UPDATED",
+    organizationId,
+    metadata: { targetUserId, newRole },
+  });
+
   return prisma.membership.update({
     where: { userId_organizationId: { userId: targetUserId, organizationId } },
     data: { role: newRole },
