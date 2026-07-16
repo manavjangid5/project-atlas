@@ -14,6 +14,8 @@ import ReactFlow, {
 import "reactflow/dist/style.css";
 import NodePalette from "./NodePalette";
 import CustomNode from "./CustomNode";
+import NodeConfigPanel from "./NodeConfigPanel";
+import RunHistoryPanel from "./RunHistoryPanel";
 import { Button } from "../../components/Button";
 import { updateWorkflowGraph, runWorkflow } from "./workflowsApi";
 import type { Workflow } from "./workflowTypes";
@@ -28,6 +30,8 @@ function CanvasInner({ workflow }: Props) {
   const [nodes, setNodes, onNodesChange] = useNodesState(workflow.graph.nodes as Node[]);
   const [edges, setEdges, onEdgesChange] = useEdgesState(workflow.graph.edges as Edge[]);
   const [saving, setSaving] = useState(false);
+  const [selectedNode, setSelectedNode] = useState<Node | null>(null);
+  const [showRuns, setShowRuns] = useState(false);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const idCounter = useRef(0);
 
@@ -60,6 +64,22 @@ function CanvasInner({ workflow }: Props) {
     setNodes((nds) => nds.concat(newNode));
   }
 
+  function onNodeClick(_e: React.MouseEvent, node: Node) {
+    setSelectedNode(node);
+    setShowRuns(false);
+  }
+
+  function handleNodeConfigSave(nodeId: string, config: Record<string, any>) {
+    setNodes((nds) =>
+      nds.map((n) => (n.id === nodeId ? { ...n, data: { ...n.data, config } } : n))
+    );
+  }
+
+  function handleNodeDelete(nodeId: string) {
+    setNodes((nds) => nds.filter((n) => n.id !== nodeId));
+    setEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId));
+  }
+
   async function handleSave() {
     setSaving(true);
     try {
@@ -75,6 +95,8 @@ function CanvasInner({ workflow }: Props) {
   async function handleRun() {
     await handleSave();
     await runWorkflow(workflow.id);
+    setShowRuns(true);
+    setSelectedNode(null);
   }
 
   return (
@@ -84,6 +106,12 @@ function CanvasInner({ workflow }: Props) {
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <h2 className="text-sm font-semibold">{workflow.name}</h2>
           <div className="flex gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => { setShowRuns(!showRuns); setSelectedNode(null); }}
+            >
+              {showRuns ? "Hide Runs" : "View Runs"}
+            </Button>
             <Button variant="secondary" onClick={handleSave} disabled={saving}>
               {saving ? "Saving…" : "Save"}
             </Button>
@@ -97,6 +125,7 @@ function CanvasInner({ workflow }: Props) {
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
+            onNodeClick={onNodeClick}
             nodeTypes={nodeTypes}
             fitView
           >
@@ -110,6 +139,16 @@ function CanvasInner({ workflow }: Props) {
           </ReactFlow>
         </div>
       </div>
+
+      {selectedNode && (
+        <NodeConfigPanel
+          node={selectedNode}
+          onClose={() => setSelectedNode(null)}
+          onSave={handleNodeConfigSave}
+          onDelete={handleNodeDelete}
+        />
+      )}
+      {showRuns && !selectedNode && <RunHistoryPanel workflowId={workflow.id} />}
     </div>
   );
 }

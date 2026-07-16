@@ -32,12 +32,19 @@ export default function DashboardLayout() {
   }
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-bg text-muted">
-        Loading workspace…
+  return <div className="min-h-screen flex items-center justify-center bg-bg text-muted">Loading workspace…</div>;
+}
+
+if (organizations.length === 0) {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-bg">
+      <div className="text-center">
+        <h2 className="text-lg font-semibold mb-2">No organizations yet</h2>
+        <p className="text-muted text-sm">Create one via the API to get started (onboarding UI coming soon).</p>
       </div>
-    );
-  }
+    </div>
+  );
+}
 
   return (
     <div className="min-h-screen flex bg-bg">
