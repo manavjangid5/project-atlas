@@ -36,7 +36,8 @@ export async function executeAiPrompt(config: any, ctx: ExecutionContext): Promi
   let attempt = 0;
   while (attempt < MAX_RETRIES) {
     try {
-      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+      // const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+      const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
       const result = await model.generateContent(prompt);
       const text = result.response.text();
 
@@ -44,6 +45,7 @@ export async function executeAiPrompt(config: any, ctx: ExecutionContext): Promi
       return { status: "SUCCESS", output: { text, cached: false } };
     } catch (err: any) {
       attempt++;
+      console.error("Gemini call failed:", err?.message || err);
       const isRateLimited = err?.status === 429;
       const isTimeout = err?.code === "ETIMEDOUT";
 
