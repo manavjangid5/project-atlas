@@ -26,6 +26,7 @@ model Organization {
   formSchemas FormSchema[]
   rules Rule[]
   notifications Notification[]
+  fileAssets FileAsset[]
 }
 model RefreshToken {
   id          String    @id @default(cuid())
@@ -196,4 +197,32 @@ model Notification {
 
   @@index([organizationId])
   @@index([userId])
+}
+model FileAsset {
+  id             String       @id @default(cuid())
+  fileName       String
+  mimeType       String
+  sizeBytes      Int
+  storageKey     String       // path in R2 bucket
+  version        Int          @default(1)
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  uploadedBy     String?
+  deletedAt      DateTime?
+  createdAt      DateTime     @default(now())
+
+  shareLinks     FileShareLink[]
+
+  @@index([organizationId])
+}
+
+model FileShareLink {
+  id         String    @id @default(cuid())
+  file       FileAsset @relation(fields: [fileId], references: [id])
+  fileId     String
+  token      String    @unique
+  expiresAt  DateTime
+  createdAt  DateTime  @default(now())
+
+  @@index([fileId])
 }
