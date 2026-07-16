@@ -14,6 +14,7 @@ import organizationsRouter from "./interfaces/http/routes/organizations";
 import workflowsRouter from "./interfaces/http/routes/workflows";
 import auditRouter from "./interfaces/http/routes/audit";
 import formsRouter from "./interfaces/http/routes/forms";
+import rulesRouter from "./interfaces/http/routes/rules";
 
 const app = express();
 
@@ -32,6 +33,7 @@ app.use("/api/v1", organizationsRouter);
 app.use("/api/v1", workflowsRouter);
 app.use("/api/v1", auditRouter);
 app.use("/api/v1", formsRouter);
+app.use("/api/v1", rulesRouter);
 
 const PORT = process.env.PORT || 4000;
 

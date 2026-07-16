@@ -24,6 +24,7 @@ model Organization {
   auditLogs   AuditLog[]
   invitations Invitation[]
   formSchemas FormSchema[]
+  rules Rule[]
 }
 model RefreshToken {
   id          String    @id @default(cuid())
@@ -165,4 +166,17 @@ model FormSubmission {
   createdAt    DateTime   @default(now())
 
   @@index([formId])
+}
+model Rule {
+  id             String       @id @default(cuid())
+  name           String
+  conditions     Json         // nested condition tree
+  action         Json         // what happens when conditions match
+  isActive       Boolean      @default(true)
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([organizationId])
 }
