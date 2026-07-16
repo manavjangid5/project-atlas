@@ -1,7 +1,7 @@
 import { prisma } from "./db";
 import { executeNode } from "./nodeExecutors";
 import type { ExecutionContext } from "./nodeExecutors";
-
+import axios from "axios";
 interface GraphNode {
   id: string;
   data: { kind: string; config: Record<string, any> };
@@ -120,6 +120,15 @@ export async function executeGraph(runId: string, graph: Graph) {
     where: { id: runId },
     data: { status: finalStatus, finishedAt: new Date() },
   });
+
+  try {
+    await axios.post(`${process.env.BACKEND_URL || "http://localhost:4000"}/api/v1/internal/notify`, {
+      runId,
+      status: finalStatus,
+    });
+  } catch (err) {
+    console.error("Failed to notify backend of run completion:", err);
+  }
 
   return finalStatus;
 }

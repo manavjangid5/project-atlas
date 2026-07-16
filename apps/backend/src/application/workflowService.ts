@@ -3,7 +3,7 @@ import { publishMessage } from "../infrastructure/rabbitmq/rabbitmqClient";
 import { AppError } from "../interfaces/http/middleware/errorHandler";
 import type { Prisma } from "@prisma/client";
 import { logAudit } from "../infrastructure/audit/auditLogger";
-
+import { createNotification } from "./notificationService";
 export async function listWorkflows(organizationId: string) {
   return prisma.workflow.findMany({
     where: { organizationId, deletedAt: null },
@@ -94,6 +94,12 @@ export async function triggerWorkflowRun(organizationId: string, workflowId: str
     action: "WORKFLOW_EXECUTED",
     organizationId,
     metadata: { workflowId: workflow.id, runId: run.id },
+  });
+  await createNotification({
+    organizationId,
+    title: "Workflow started",
+    message: `"${workflow.name}" is running (run ${run.id.slice(0, 8)})`,
+    priority: "low",
   });
   return run;
 }

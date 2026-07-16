@@ -15,6 +15,9 @@ import workflowsRouter from "./interfaces/http/routes/workflows";
 import auditRouter from "./interfaces/http/routes/audit";
 import formsRouter from "./interfaces/http/routes/forms";
 import rulesRouter from "./interfaces/http/routes/rules";
+import internalRouter from "./interfaces/http/routes/internal";
+import notificationsRouter from "./interfaces/http/routes/notifications";
+import { initSocketServer } from "./infrastructure/realtime/socketServer";
 
 const app = express();
 
@@ -34,9 +37,13 @@ app.use("/api/v1", workflowsRouter);
 app.use("/api/v1", auditRouter);
 app.use("/api/v1", formsRouter);
 app.use("/api/v1", rulesRouter);
+app.use("/api/v1", internalRouter);
+app.use("/api/v1", notificationsRouter);
 
 const PORT = process.env.PORT || 4000;
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Backend running on http://localhost:${PORT}`);
 });
+
+initSocketServer(server);

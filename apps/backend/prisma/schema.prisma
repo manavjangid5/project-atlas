@@ -25,6 +25,7 @@ model Organization {
   invitations Invitation[]
   formSchemas FormSchema[]
   rules Rule[]
+  notifications Notification[]
 }
 model RefreshToken {
   id          String    @id @default(cuid())
@@ -50,6 +51,7 @@ model User {
   memberships   Membership[]
   auditLogs     AuditLog[]
   refreshTokens RefreshToken[]
+  notifications Notification[]
 }
 
 model Membership {
@@ -179,4 +181,19 @@ model Rule {
   updatedAt      DateTime     @updatedAt
 
   @@index([organizationId])
+}
+model Notification {
+  id             String       @id @default(cuid())
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  user           User?        @relation(fields: [userId], references: [id])
+  userId         String?      // null = broadcast to whole org
+  title          String
+  message        String
+  priority       String       @default("normal") // low | normal | high
+  readAt         DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId])
+  @@index([userId])
 }

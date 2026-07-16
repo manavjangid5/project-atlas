@@ -4,6 +4,7 @@ import clsx from "clsx";
 import { useAuthStore } from "../store/authStore";
 import { fetchOrganizations } from "../features/organizations/organizationsApi";
 import { api } from "../lib/api";
+import NotificationBell from "../features/notifications/NotificationBell";
 
 const NAV_ITEMS = [
   { label: "Workflows", path: "/dashboard/workflows" },
@@ -96,9 +97,14 @@ if (organizations.length === 0) {
         </button>
       </aside>
 
-      <main className="flex-1 overflow-auto">
-        <Outlet />
-      </main>
+      <main className="flex-1 overflow-auto flex flex-col">
+  <div className="flex justify-end px-6 py-3 border-b border-border">
+    <NotificationBell />
+  </div>
+  <div className="flex-1 overflow-auto">
+    <Outlet />
+  </div>
+</main>
     </div>
   );
 }
