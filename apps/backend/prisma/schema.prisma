@@ -27,6 +27,7 @@ model Organization {
   rules Rule[]
   notifications Notification[]
   fileAssets FileAsset[]
+  apiKeys ApiKey[]
 }
 model RefreshToken {
   id          String    @id @default(cuid())
@@ -225,4 +226,31 @@ model FileShareLink {
   createdAt  DateTime  @default(now())
 
   @@index([fileId])
+}
+model ApiKey {
+  id             String       @id @default(cuid())
+  name           String
+  keyHash        String       @unique
+  keyPrefix      String       // first 8 chars shown to user for identification
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  lastUsedAt     DateTime?
+  revokedAt      DateTime?
+  createdAt      DateTime     @default(now())
+
+  usageLogs      ApiUsageLog[]
+
+  @@index([organizationId])
+}
+
+model ApiUsageLog {
+  id        String   @id @default(cuid())
+  apiKey    ApiKey   @relation(fields: [apiKeyId], references: [id])
+  apiKeyId  String
+  endpoint  String
+  method    String
+  statusCode Int
+  createdAt DateTime @default(now())
+
+  @@index([apiKeyId])
 }

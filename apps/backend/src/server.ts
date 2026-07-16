@@ -20,10 +20,20 @@ import notificationsRouter from "./interfaces/http/routes/notifications";
 import { initSocketServer } from "./infrastructure/realtime/socketServer";
 import analyticsRouter from "./interfaces/http/routes/analytics";
 import filesRouter from "./interfaces/http/routes/files";
+import apiKeysRouter from "./interfaces/http/routes/apiKeys";
+import rateLimit from "express-rate-limit";
 
 const app = express();
 
 app.use(helmet());
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 300, // generous — auth routes already have their own stricter limiter
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use("/api/v1", globalLimiter);
 app.use(cors({ origin: process.env.FRONTEND_URL || "http://localhost:5173", credentials: true }));
 app.use(express.json());
 app.use(cookieParser());
@@ -43,6 +53,7 @@ app.use("/api/v1", internalRouter);
 app.use("/api/v1", notificationsRouter);
 app.use("/api/v1", analyticsRouter);
 app.use("/api/v1", filesRouter);
+app.use("/api/v1", apiKeysRouter);
 
 const PORT = process.env.PORT || 4000;
 
