@@ -4,6 +4,12 @@ import { verifyAccessToken } from "../auth/tokens";
 
 let io: SocketIOServer | null = null;
 
+function parseCookie(cookieHeader: string | undefined, name: string): string | null {
+  if (!cookieHeader) return null;
+  const match = cookieHeader.match(new RegExp(`${name}=([^;]+)`));
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
 export function initSocketServer(httpServer: HttpServer) {
   io = new SocketIOServer(httpServer, {
     cors: {
@@ -12,22 +18,28 @@ export function initSocketServer(httpServer: HttpServer) {
     },
   });
 
-  // Auth handshake: client sends its access token, we verify and join
-  // them to a room scoped to their organization so notifications
-  // only reach members of that org — same tenant-isolation principle
-  // as the REST API, applied to the realtime layer.
   io.on("connection", (socket) => {
-    socket.on("authenticate", ({ token, organizationId }) => {
-      try {
-        const payload = verifyAccessToken(token);
-        socket.data.userId = payload.id;
+    // Read the httpOnly accessToken cookie directly from the raw
+    // handshake headers — the browser attaches it automatically
+    // (same as any XHR/fetch call), so no client-side token handling
+    // is needed or even possible, matching how our REST auth works.
+    const cookieHeader = socket.handshake.headers.cookie;
+    const token = parseCookie(cookieHeader, "accessToken");
+
+    try {
+      const payload = token ? verifyAccessToken(token) : null;
+      if (!payload) throw new Error("No valid token");
+
+      socket.data.userId = payload.id;
+      socket.emit("authenticated", { ok: true });
+
+      socket.on("join-org", (organizationId: string) => {
         socket.join(`org:${organizationId}`);
         socket.join(`user:${payload.id}`);
-        socket.emit("authenticated", { ok: true });
-      } catch {
-        socket.emit("authenticated", { ok: false });
-      }
-    });
+      });
+    } catch {
+      socket.emit("authenticated", { ok: false });
+    }
   });
 
   return io;

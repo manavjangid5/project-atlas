@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from "react";
+import { useEffect } from "react";
 import ReactFlow, {
   Background,
   Controls,
@@ -39,7 +40,14 @@ function CanvasInner({ workflow }: Props) {
     (connection: Connection) => setEdges((eds) => addEdge(connection, eds)),
     [setEdges]
   );
-
+  useEffect(() => {
+    function handleDeleteEvent(e: Event) {
+      const nodeId = (e as CustomEvent).detail?.nodeId;
+      if (nodeId) handleNodeDelete(nodeId);
+    }
+    window.addEventListener("atlas-delete-node", handleDeleteEvent);
+    return () => window.removeEventListener("atlas-delete-node", handleDeleteEvent);
+  }, []);
   function onDragOver(e: React.DragEvent) {
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
@@ -70,10 +78,13 @@ function CanvasInner({ workflow }: Props) {
   }
 
   function handleNodeConfigSave(nodeId: string, config: Record<string, any>) {
-    setNodes((nds) =>
-      nds.map((n) => (n.id === nodeId ? { ...n, data: { ...n.data, config } } : n))
-    );
-  }
+  // console.log("[WorkflowCanvas] handleNodeConfigSave called:", nodeId, config);
+  setNodes((nds) => {
+    const updated = nds.map((n) => (n.id === nodeId ? { ...n, data: { ...n.data, config } } : n));
+    // console.log("[WorkflowCanvas] nodes after update:", updated.map(n => ({ id: n.id, config: n.data.config })));
+    return updated;
+  });
+}
 
   function handleNodeDelete(nodeId: string) {
     setNodes((nds) => nds.filter((n) => n.id !== nodeId));
@@ -81,17 +92,17 @@ function CanvasInner({ workflow }: Props) {
   }
 
   async function handleSave() {
-    setSaving(true);
-    try {
-      await updateWorkflowGraph(workflow.id, {
-        nodes: nodes as any,
-        edges: edges as any,
-      });
-    } finally {
-      setSaving(false);
-    }
+  setSaving(true);
+  // console.log("[WorkflowCanvas] Saving graph, nodes:", nodes.map(n => ({ id: n.id, config: n.data.config })));
+  try {
+    await updateWorkflowGraph(workflow.id, {
+      nodes: nodes as any,
+      edges: edges as any,
+    });
+  } finally {
+    setSaving(false);
   }
-
+}
   async function handleRun() {
     await handleSave();
     await runWorkflow(workflow.id);
@@ -127,6 +138,7 @@ function CanvasInner({ workflow }: Props) {
             onConnect={onConnect}
             onNodeClick={onNodeClick}
             nodeTypes={nodeTypes}
+            deleteKeyCode={["Delete", "Backspace"]}
             fitView
           >
             <Background color="#2A2A2A" gap={20} />
@@ -142,6 +154,7 @@ function CanvasInner({ workflow }: Props) {
 
       {selectedNode && (
         <NodeConfigPanel
+          key={selectedNode.id}
           node={selectedNode}
           onClose={() => setSelectedNode(null)}
           onSave={handleNodeConfigSave}

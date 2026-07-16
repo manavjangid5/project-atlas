@@ -6,6 +6,7 @@ export function getSocket(): Socket {
   if (!socket) {
     socket = io(import.meta.env.VITE_API_URL?.replace("/api/v1", "") || "http://localhost:4000", {
       autoConnect: false,
+      withCredentials: true, // sends the httpOnly cookie automatically
     });
   }
   return socket;

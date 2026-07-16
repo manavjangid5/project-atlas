@@ -18,6 +18,7 @@ import rulesRouter from "./interfaces/http/routes/rules";
 import internalRouter from "./interfaces/http/routes/internal";
 import notificationsRouter from "./interfaces/http/routes/notifications";
 import { initSocketServer } from "./infrastructure/realtime/socketServer";
+import analyticsRouter from "./interfaces/http/routes/analytics";
 
 const app = express();
 
@@ -39,6 +40,7 @@ app.use("/api/v1", formsRouter);
 app.use("/api/v1", rulesRouter);
 app.use("/api/v1", internalRouter);
 app.use("/api/v1", notificationsRouter);
+app.use("/api/v1", analyticsRouter);
 
 const PORT = process.env.PORT || 4000;
 

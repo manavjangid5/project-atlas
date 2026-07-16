@@ -21,23 +21,25 @@ export default function NotificationBell() {
   const unreadCount = notifications.filter((n) => !n.readAt).length;
 
   useEffect(() => {
-    api.get("/notifications").then((res) => setNotifications(res.data));
+  api.get("/notifications").then((res) => setNotifications(res.data));
 
-    const socket = getSocket();
-    const token = document.cookie.match(/accessToken=([^;]+)/)?.[1];
+  const socket = getSocket();
+  if (!socket.connected) socket.connect();
 
-    if (!socket.connected) socket.connect();
-    socket.emit("authenticate", { token, organizationId: activeOrgId });
+  socket.on("authenticated", ({ ok }: { ok: boolean }) => {
+    if (ok && activeOrgId) socket.emit("join-org", activeOrgId);
+  });
 
-    function handleNew(notification: Notification) {
-      setNotifications((prev) => [notification, ...prev]);
-    }
-    socket.on("notification", handleNew);
+  function handleNew(notification: Notification) {
+    setNotifications((prev) => [notification, ...prev]);
+  }
+  socket.on("notification", handleNew);
 
-    return () => {
-      socket.off("notification", handleNew);
-    };
-  }, [activeOrgId]);
+  return () => {
+    socket.off("notification", handleNew);
+    socket.off("authenticated");
+  };
+    }, [activeOrgId]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {

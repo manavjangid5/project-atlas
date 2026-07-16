@@ -22,13 +22,14 @@ export default function NodeConfigPanel({ node, onClose, onSave, onDelete }: Pro
   const kind = node.data.kind as keyof typeof NODE_CONFIG_SCHEMAS;
   const fields = NODE_CONFIG_SCHEMAS[kind] || [];
 
+  // Every keystroke immediately pushes into the canvas node's data —
+  // no separate "Apply" step to forget. The top-level Save button
+  // (canvas toolbar) then always persists whatever is currently on
+  // screen, matching user expectation of "what I see is what saves."
   function handleChange(key: string, value: string) {
-    setConfig((prev) => ({ ...prev, [key]: value }));
-  }
-
-  function handleSave() {
-    onSave(node!.id, config);
-    onClose();
+    const updated = { ...config, [key]: value };
+    setConfig(updated);
+    onSave(node!.id, updated);
   }
 
   return (
@@ -81,7 +82,7 @@ export default function NodeConfigPanel({ node, onClose, onSave, onDelete }: Pro
       </div>
 
       <div className="p-4 border-t border-border flex gap-2">
-        <Button onClick={handleSave} className="flex-1">Apply</Button>
+        <Button variant="secondary" onClick={onClose} className="flex-1">Done</Button>
         <Button variant="secondary" onClick={() => { onDelete(node!.id); onClose(); }}>
           Delete
         </Button>
