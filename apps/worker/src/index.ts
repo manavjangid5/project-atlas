@@ -1,11 +1,13 @@
 import dotenv from "dotenv";
 dotenv.config();
-
+import { startHealthServer } from "./healthServer";
 import { connectConsumer, QUEUE_NAME } from "./rabbitmqConsumer";
 import { executeGraph } from "./graphExecutor";
 import { prisma } from "./db";
 
 async function main() {
+  startHealthServer(); 
+  
   const channel = await connectConsumer();
   console.log(`Worker listening on queue "${QUEUE_NAME}"...`);
 
