@@ -31,22 +31,50 @@ api.interceptors.request.use((config) => {
 let isRefreshing = false;
 
 api.interceptors.response.use(
-  (res) => res,
+  (response) => response,
   async (error) => {
     const original = error.config;
-    if (error.response?.status === 401 && !original._retry && !isRefreshing) {
+
+    // If there's no response (network error), don't retry
+    if (!error.response) {
+      return Promise.reject(error);
+    }
+
+    // Don't try to refresh auth endpoints themselves
+    if (
+      original?.url?.includes("/auth/refresh") ||
+      original?.url?.includes("/auth/login") ||
+      original?.url?.includes("/auth/logout")
+    ) {
+      return Promise.reject(error);
+    }
+
+    if (
+      error.response.status === 401 &&
+      !original._retry &&
+      !isRefreshing
+    ) {
       original._retry = true;
       isRefreshing = true;
+
       try {
         await api.post("/auth/refresh");
+
         isRefreshing = false;
+
         return api(original);
-      } catch (refreshError) {
+      } catch (err) {
         isRefreshing = false;
-        window.location.href = "/login";
-        return Promise.reject(refreshError);
+
+        // Redirect only once
+        if (window.location.pathname !== "/login") {
+          window.location.replace("/login");
+        }
+
+        return Promise.reject(err);
       }
     }
+
     return Promise.reject(error);
   }
 );

@@ -16,15 +16,20 @@ const NAV_ITEMS = [
   { label: "Audit Log", path: "/dashboard/audit" },
   { label: "Rules", path: "/dashboard/rules" },
   { label: "Files", path: "/dashboard/files" },
-{ label: "API Keys", path: "/dashboard/api-keys" },
-{ label: "Feature Flags", path: "/dashboard/feature-flags" },
+  { label: "API Keys", path: "/dashboard/api-keys" },
+  { label: "Feature Flags", path: "/dashboard/feature-flags" },
 ];
 
 export default function DashboardLayout() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { organizations, activeOrgId, setOrganizations, setActiveOrg, getActiveOrg } =
-    useAuthStore();
+  const {
+    organizations,
+    activeOrgId,
+    setOrganizations,
+    setActiveOrg,
+    getActiveOrg,
+  } = useAuthStore();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -39,23 +44,29 @@ export default function DashboardLayout() {
   }
 
   if (loading) {
-  return <div className="min-h-screen flex items-center justify-center bg-bg text-muted">Loading workspace…</div>;
-}
-
-if (organizations.length === 0) {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-bg">
-      <div className="text-center">
-        <h2 className="text-lg font-semibold mb-2">No organizations yet</h2>
-        <p className="text-muted text-sm">Create one via the API to get started (onboarding UI coming soon).</p>
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-bg text-muted">
+        Loading workspace…
       </div>
-    </div>
-  );
-}
+    );
+  }
+
+  if (organizations.length === 0) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-bg">
+        <div className="text-center">
+          <h2 className="text-lg font-semibold mb-2">No organizations yet</h2>
+          <p className="text-muted text-sm">
+            Create one via the API to get started (onboarding UI coming soon).
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex bg-bg">
-      <aside className="w-56 border-r border-border flex flex-col bg-surface">
+      <aside className="w-56 border-r border-border flex flex-col bg-surface h-screen sticky top-0">
         <div className="px-4 py-5 border-b border-border">
           <h1 className="font-extrabold text-lg tracking-tight">Atlas</h1>
         </div>
@@ -76,7 +87,7 @@ if (organizations.length === 0) {
           <p className="text-xs text-muted mt-1">{getActiveOrg()?.role}</p>
         </div>
 
-        <nav className="flex-1 py-3">
+        <nav className="flex-1 py-3 overflow-y-auto">
           {NAV_ITEMS.map((item) => (
             <Link
               key={item.path}
@@ -85,7 +96,7 @@ if (organizations.length === 0) {
                 "block px-4 py-2 text-sm",
                 location.pathname.startsWith(item.path)
                   ? "text-accent bg-surfaceHover border-r-2 border-accent"
-                  : "text-muted hover:text-text"
+                  : "text-muted hover:text-text",
               )}
             >
               {item.label}
@@ -95,21 +106,21 @@ if (organizations.length === 0) {
 
         <button
           onClick={handleLogout}
-          className="px-4 py-3 text-sm text-muted hover:text-danger text-left border-t border-border"
+          className="px-4 py-3 text-sm text-muted hover:text-danger text-left border-t border-border shrink-0"
         >
           Sign out
         </button>
       </aside>
 
       <main className="flex-1 overflow-auto flex flex-col">
-  <div className="flex items-center justify-between px-6 py-3 border-b border-border">
-  <GlobalSearchBar />
-  <NotificationBell />
-</div>
-  <div className="flex-1 overflow-auto">
-    <Outlet />
-  </div>
-</main>
+        <div className="flex items-center justify-between px-6 py-3 border-b border-border">
+          <GlobalSearchBar />
+          <NotificationBell />
+        </div>
+        <div className="flex-1 overflow-auto">
+          <Outlet />
+        </div>
+      </main>
     </div>
   );
 }

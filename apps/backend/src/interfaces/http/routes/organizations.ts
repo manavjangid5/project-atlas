@@ -2,6 +2,7 @@ import { Router } from "express";
 import { requireAuth, AuthedRequest } from "../middleware/auth";
 import { requireTenant, requireTenantRole, TenantRequest } from "../middleware/tenant";
 import * as orgService from "../../../application/organizationService";
+import { prisma } from "../../../infrastructure/database/prismaClient";
 
 const router = Router();
 
@@ -15,7 +16,26 @@ router.get("/organizations", requireAuth, async (req: AuthedRequest, res) => {
   const orgs = await orgService.listUserOrganizations(req.user!.id);
   res.json(orgs);
 });
-
+router.get("/organizations/members", requireAuth, requireTenant, async (req: TenantRequest, res) => {
+  const members = await prisma.membership.findMany({
+    where: { organizationId: req.tenant!.organizationId },
+    include: { user: { select: { email: true, name: true } } },
+  });
+  res.json(members);
+});
+router.patch(
+  "/organizations/:orgId",
+  requireAuth,
+  requireTenant,
+  requireTenantRole("OWNER"),
+  async (req: TenantRequest, res) => {
+    const updated = await prisma.organization.update({
+      where: { id: req.tenant!.organizationId },
+      data: { name: req.body.name },
+    });
+    res.json(updated);
+  }
+);
 router.post(
   "/organizations/:orgId/invitations",
   requireAuth,
@@ -32,6 +52,8 @@ router.post(
     res.status(201).json({ token: invite.token, expiresAt: invite.expiresAt });
   }
 );
+
+
 
 router.post("/invitations/:token/accept", requireAuth, async (req: AuthedRequest, res) => {
   const result = await orgService.acceptInvitation(req.params.token, req.user!.id);

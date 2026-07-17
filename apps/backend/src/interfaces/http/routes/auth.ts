@@ -2,7 +2,7 @@ import { Router } from "express";
 import rateLimit from "express-rate-limit";
 import passport from "../../../infrastructure/auth/passport";
 import * as authService from "../../../application/authService";
-
+import { requireAuth } from "../middleware/auth";
 const router = Router();
 
 const authLimiter = rateLimit({
@@ -22,6 +22,10 @@ function setAuthCookies(res: any, accessToken: string, refreshToken: string) {
   res.cookie("accessToken", accessToken, { ...COOKIE_OPTS, maxAge: 15 * 60 * 1000 });
   res.cookie("refreshToken", refreshToken, { ...COOKIE_OPTS, maxAge: 30 * 24 * 60 * 60 * 1000 });
 }
+
+router.get("/me", requireAuth, async (req, res) => {
+  res.json({ id: req.user!.id, email: req.user!.email });
+});
 
 router.post("/register", authLimiter, async (req, res) => {
   const { email, password, name } = req.body;
