@@ -6,6 +6,10 @@ import { prisma } from "../../../infrastructure/database/prismaClient";
 
 const router = Router();
 
+function paramStr(value: string | string[] | undefined): string {
+  return Array.isArray(value) ? value[0] : (value as string);
+}
+
 router.post("/organizations", requireAuth, async (req: AuthedRequest, res) => {
   const { name } = req.body;
   const org = await orgService.createOrganization(req.user!.id, name);
@@ -56,7 +60,7 @@ router.post(
 
 
 router.post("/invitations/:token/accept", requireAuth, async (req: AuthedRequest, res) => {
-  const result = await orgService.acceptInvitation(req.params.token, req.user!.id);
+  const result = await orgService.acceptInvitation( paramStr(req.params.token), req.user!.id);
   res.json(result);
 });
 
@@ -68,7 +72,7 @@ router.patch(
   async (req: TenantRequest, res) => {
     const updated = await orgService.updateMemberRole(
       req.tenant!.organizationId,
-      req.params.userId,
+       paramStr(req.params.userId),
       req.body.role
     );
     res.json(updated);
@@ -81,7 +85,7 @@ router.delete(
   requireTenant,
   requireTenantRole("OWNER", "ADMIN"),
   async (req: TenantRequest, res) => {
-    await orgService.removeMember(req.tenant!.organizationId, req.params.userId);
+    await orgService.removeMember(req.tenant!.organizationId,  paramStr(req.params.userId));
     res.status(204).send();
   }
 );
