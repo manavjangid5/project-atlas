@@ -11,6 +11,7 @@ import RulesPage from "./features/rules/RulesPage";
 import FilesPage from "./features/files/FilesPage";
 import ApiKeysPage from "./features/apiKeys/ApiKeysPage";
 import FeatureFlagsPage from "./features/featureFlags/FeatureFlagsPage";
+import SharePage from "./features/files/SharePage";
 export default function App() {
   return (
     <BrowserRouter>
@@ -29,6 +30,7 @@ export default function App() {
           <Route path="api-keys" element={<ApiKeysPage />} />
           <Route path="feature-flags" element={<FeatureFlagsPage />} />
         </Route>
+        <Route path="/share/:token" element={<SharePage />} />
         <Route path="/" element={<Navigate to="/dashboard" />} />
       </Routes>
     </BrowserRouter>
