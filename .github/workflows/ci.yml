@@ -32,9 +32,8 @@ jobs:
           node-version: 24
           cache: pnpm
 
-      - name: Install dependencies
+      - name: Install all workspace dependencies
         run: pnpm install --frozen-lockfile
-        working-directory: apps/backend
 
       - name: Generate Prisma client
         run: npx prisma generate
@@ -71,13 +70,12 @@ jobs:
           node-version: 24
           cache: pnpm
 
-      - name: Install backend deps (shared Prisma client)
-        run: pnpm install --frozen-lockfile && npx prisma generate
-        working-directory: apps/backend
-
-      - name: Install worker dependencies
+      - name: Install all workspace dependencies
         run: pnpm install --frozen-lockfile
-        working-directory: apps/worker
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+        working-directory: apps/backend
 
       - name: Type check
         run: npx tsc --noEmit
@@ -97,9 +95,8 @@ jobs:
           node-version: 24
           cache: pnpm
 
-      - name: Install dependencies
+      - name: Install all workspace dependencies
         run: pnpm install --frozen-lockfile
-        working-directory: apps/frontend
 
       - name: Type check
         run: npx tsc --noEmit

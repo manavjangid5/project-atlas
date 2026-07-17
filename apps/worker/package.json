@@ -5,7 +5,6 @@
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "postinstall": "prisma generate --schema=../backend/prisma/schema.prisma",
     "test": "jest"
   },
   "dependencies": {
