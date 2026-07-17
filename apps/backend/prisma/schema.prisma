@@ -254,3 +254,13 @@ model ApiUsageLog {
 
   @@index([apiKeyId])
 }
+model FeatureFlag {
+  id                String   @id @default(cuid())
+  key               String   @unique
+  description       String?
+  isGloballyEnabled Boolean  @default(false)
+  rolloutPercentage Int      @default(0) // 0-100
+  targetOrgIds      String[] @default([]) // org-specific overrides, always enabled for these
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}

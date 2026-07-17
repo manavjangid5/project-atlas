@@ -5,6 +5,7 @@ import { useAuthStore } from "../store/authStore";
 import { fetchOrganizations } from "../features/organizations/organizationsApi";
 import { api } from "../lib/api";
 import NotificationBell from "../features/notifications/NotificationBell";
+import GlobalSearchBar from "../features/search/GlobalSearchBar";
 
 const NAV_ITEMS = [
   { label: "Workflows", path: "/dashboard/workflows" },
@@ -14,6 +15,9 @@ const NAV_ITEMS = [
   { label: "Settings", path: "/dashboard/settings" },
   { label: "Audit Log", path: "/dashboard/audit" },
   { label: "Rules", path: "/dashboard/rules" },
+  { label: "Files", path: "/dashboard/files" },
+{ label: "API Keys", path: "/dashboard/api-keys" },
+{ label: "Feature Flags", path: "/dashboard/feature-flags" },
 ];
 
 export default function DashboardLayout() {
@@ -98,9 +102,10 @@ if (organizations.length === 0) {
       </aside>
 
       <main className="flex-1 overflow-auto flex flex-col">
-  <div className="flex justify-end px-6 py-3 border-b border-border">
-    <NotificationBell />
-  </div>
+  <div className="flex items-center justify-between px-6 py-3 border-b border-border">
+  <GlobalSearchBar />
+  <NotificationBell />
+</div>
   <div className="flex-1 overflow-auto">
     <Outlet />
   </div>

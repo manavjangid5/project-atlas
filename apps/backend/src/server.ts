@@ -22,6 +22,8 @@ import analyticsRouter from "./interfaces/http/routes/analytics";
 import filesRouter from "./interfaces/http/routes/files";
 import apiKeysRouter from "./interfaces/http/routes/apiKeys";
 import rateLimit from "express-rate-limit";
+import searchRouter from "./interfaces/http/routes/search";
+import featureFlagsRouter from "./interfaces/http/routes/featureFlags";
 
 const app = express();
 
@@ -54,6 +56,8 @@ app.use("/api/v1", notificationsRouter);
 app.use("/api/v1", analyticsRouter);
 app.use("/api/v1", filesRouter);
 app.use("/api/v1", apiKeysRouter);
+app.use("/api/v1", searchRouter);
+app.use("/api/v1", featureFlagsRouter);
 
 const PORT = process.env.PORT || 4000;
 
