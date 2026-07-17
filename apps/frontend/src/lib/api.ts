@@ -4,6 +4,21 @@ export const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "http://localhost:4000/api/v1",
   withCredentials: true,
 });
+let csrfToken: string | null = null;
+
+api.interceptors.request.use(async (config) => {
+  if (config.method !== "get" && !csrfToken) {
+    const res = await axios.get(
+      `${config.baseURL}/csrf-token`,
+      { withCredentials: true }
+    );
+    csrfToken = res.data.csrfToken;
+  }
+  if (csrfToken && config.method !== "get") {
+    config.headers["x-csrf-token"] = csrfToken;
+  }
+  return config;
+});
 
 api.interceptors.request.use((config) => {
   const activeOrgId = localStorage.getItem("activeOrgId");

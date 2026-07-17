@@ -24,10 +24,22 @@ import apiKeysRouter from "./interfaces/http/routes/apiKeys";
 import rateLimit from "express-rate-limit";
 import searchRouter from "./interfaces/http/routes/search";
 import featureFlagsRouter from "./interfaces/http/routes/featureFlags";
+import { doubleCsrfProtection, generateCsrfToken } from "./interfaces/http/middleware/csrf";
 
 const app = express();
 
-app.use(helmet());
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        connectSrc: ["'self'", process.env.FRONTEND_URL || "http://localhost:5173"],
+      },
+    },
+    crossOriginResourcePolicy: { policy: "cross-origin" }, // needed since R2 file URLs are cross-origin
+  })
+);
+
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 300, // generous — auth routes already have their own stricter limiter
@@ -58,6 +70,16 @@ app.use("/api/v1", filesRouter);
 app.use("/api/v1", apiKeysRouter);
 app.use("/api/v1", searchRouter);
 app.use("/api/v1", featureFlagsRouter);
+app.get("/api/v1/csrf-token", (req, res) => {
+  const token = generateCsrfToken(req, res);
+  res.json({ csrfToken: token });
+});
+app.use((req, res, next) => {
+  const exemptPaths = ["/api/v1/auth/login", "/api/v1/auth/register", "/api/v1/auth/refresh"];
+  const isExempt = exemptPaths.includes(req.path) || req.path.startsWith("/api/v1/auth/google") || req.path.startsWith("/api/v1/auth/github");
+  if (isExempt || req.method === "GET") return next();
+  return doubleCsrfProtection(req, res, next);
+});
 
 const PORT = process.env.PORT || 4000;
 

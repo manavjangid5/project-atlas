@@ -10,6 +10,12 @@ import {
 import { AppError } from "../interfaces/http/middleware/errorHandler";
 import { logAudit } from "../infrastructure/audit/auditLogger";
 
+function validatePasswordStrength(password: string) {
+  if (password.length < 8) throw new AppError(400, "Password must be at least 8 characters");
+  if (!/[A-Z]/.test(password)) throw new AppError(400, "Password must contain an uppercase letter");
+  if (!/[0-9]/.test(password)) throw new AppError(400, "Password must contain a number");
+}
+
 async function issueTokenPair(userId: string, email: string, family?: string) {
   const tokenFamily = family || crypto.randomUUID();
   const { raw, hash } = generateRefreshToken();
@@ -30,6 +36,8 @@ async function issueTokenPair(userId: string, email: string, family?: string) {
 export async function register(email: string, password: string, name?: string) {
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) throw new AppError(409, "Email already registered");
+
+  validatePasswordStrength(password);
 
   const passwordHash = await bcrypt.hash(password, 12);
   const user = await prisma.user.create({ data: { email, passwordHash, name } });
