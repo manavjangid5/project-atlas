@@ -14,6 +14,7 @@ import FilesPage from "./features/files/FilesPage";
 import ApiKeysPage from "./features/apiKeys/ApiKeysPage";
 import FeatureFlagsPage from "./features/featureFlags/FeatureFlagsPage";
 import SharePage from "./features/files/SharePage";
+import RegisterPage from "./features/auth/RegisterPage";
 
 export default function App() {
   return (
@@ -21,6 +22,7 @@ export default function App() {
       <Routes>
         <Route element={<RedirectIfAuthed />}>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
         </Route>
 
         <Route path="/share/:token" element={<SharePage />} />

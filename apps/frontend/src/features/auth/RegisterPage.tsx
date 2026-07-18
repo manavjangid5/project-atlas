@@ -1,25 +1,30 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { api } from "../../lib/api";
 import { useAuthStore } from "../../store/authStore";
 import { Button } from "../../components/Button";
 
-export default function LoginPage() {
+export default function RegisterPage() {
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const setAuthenticated = useAuthStore((s) => s.setAuthenticated);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    setLoading(true);
     try {
-      await api.post("/auth/login", { email, password });
+      await api.post("/auth/register", { email, password, name });
       setAuthenticated(true);
       navigate("/dashboard");
-    } catch {
-      setError("Invalid email or password.");
+    } catch (err: any) {
+      setError(err?.response?.data?.error || "Registration failed. Please try again.");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -31,9 +36,9 @@ export default function LoginPage() {
 
       <div className="flex-1 flex items-center justify-center px-4">
         <div className="w-full max-w-md bg-surface border border-border rounded-lg p-8">
-          <h2 className="text-2xl font-extrabold mb-6 tracking-tight">Welcome back</h2>
+          <h2 className="text-2xl font-extrabold mb-6 tracking-tight">Create your account</h2>
 
-          <a href="http://localhost:4000/api/v1/auth/google" className="block mb-4">
+          <a href={`${import.meta.env.VITE_API_URL}/auth/google`} className="block mb-4">
             <Button variant="secondary" type="button" className="w-full">
               Continue with Google
             </Button>
@@ -47,6 +52,13 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-3">
             <input
+              type="text"
+              placeholder="Full name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full bg-bg border border-border rounded-sm px-3 py-2.5 text-sm text-text placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-accent"
+            />
+            <input
               type="email"
               placeholder="Email"
               value={email}
@@ -55,18 +67,21 @@ export default function LoginPage() {
             />
             <input
               type="password"
-              placeholder="Password"
+              placeholder="Password (min 8 chars, 1 uppercase, 1 number)"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full bg-bg border border-border rounded-sm px-3 py-2.5 text-sm text-text placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-accent"
             />
             {error && <p className="text-danger text-sm">{error}</p>}
-            <Button type="submit" className="w-full mt-2">Continue</Button>
-            <p className="text-xs text-muted mt-6 text-center">
-              Don't have an account?{" "}
-              <Link to="/register" className="text-accent hover:underline">Create one</Link>
-            </p>
+            <Button type="submit" className="w-full mt-2" disabled={loading}>
+              {loading ? "Creating account…" : "Create account"}
+            </Button>
           </form>
+
+          <p className="text-xs text-muted mt-6 text-center">
+            Already have an account?{" "}
+            <Link to="/login" className="text-accent hover:underline">Sign in</Link>
+          </p>
         </div>
       </div>
     </div>

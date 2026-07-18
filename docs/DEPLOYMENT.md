@@ -8,8 +8,8 @@ managed services, all env-var driven.
 | Service | Used for | Why this one |
 |---|---|---|
 | **Render Postgres** | Primary database | Free tier; expires 30 days after creation — recreate close to any submission/review date if there's a gap |
-| **CloudAMQP** (RabbitMQ, free "Little Lemur" plan) | Message queue for workflow execution | Originally planned Upstash Kafka; Upstash discontinued Kafka in March 2025 (see TRADEOFFS.md) |
-| **Cloudflare R2** | File storage (S3-compatible) | Generous free tier, no card required |
+| **CloudAMQP** (RabbitMQ, free "Little Lemur" plan) | Message queue for workflow execution | Originally planned Upstash Kafka; Upstash discontinued Kafka in March 2025 |
+| **Cloudflare R2** | File storage (S3-compatible) | Generous free tier, card required, charges implemented after free limit exhaustion|
 | **Google AI Studio** | Gemini API key for AI nodes | Free tier |
 | **Google Cloud Console** | Google OAuth credentials | — |
 | **GitHub Developer Settings** | GitHub OAuth credentials | — |

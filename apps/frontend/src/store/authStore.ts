@@ -22,12 +22,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   activeOrgId: localStorage.getItem("activeOrgId"),
   setAuthenticated: (val) => set({ isAuthenticated: val }),
   setOrganizations: (orgs) => {
-    set({ organizations: orgs });
-    const current = get().activeOrgId;
-    if (!current && orgs.length > 0) {
-      get().setActiveOrg(orgs[0].id);
-    }
-  },
+  set({ organizations: orgs });
+  const current = get().activeOrgId;
+  const stillValid = current && orgs.some((o) => o.id === current);
+  if (!stillValid && orgs.length > 0) {
+    get().setActiveOrg(orgs[0].id);
+  }
+},
   setActiveOrg: (id) => {
     localStorage.setItem("activeOrgId", id);
     set({ activeOrgId: id });

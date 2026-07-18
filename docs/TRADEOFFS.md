@@ -6,14 +6,6 @@ the honest cost of each one is. Written for a reviewer who wants to see
 
 ## Infrastructure pivots (things that changed mid-build, not by choice)
 
-**Kafka → RabbitMQ.** Originally planned Upstash Kafka (free, serverless) per
-the assignment's own tech stack table (`RabbitMQ / Kafka`). Discovered mid-build
-that Upstash fully discontinued their Kafka product in March 2025. Pivoted to
-RabbitMQ via CloudAMQP's free tier — the other explicitly-allowed option in
-the spec. Cost: rebuilt the producer/consumer layer once (`kafkajs` →
-`amqplib`); the graph-executor logic itself was untouched since it only
-depends on receiving a JSON message, not the transport.
-
 **Render Background Worker (free) → Worker-as-Web-Service hack.** Render
 removed the free tier for its dedicated Background Worker service type
 mid-project. Rather than pay $7/mo, the worker runs as a free Web Service with

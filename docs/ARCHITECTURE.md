@@ -94,7 +94,7 @@ infrastructure/     Concrete implementations
   storage/          Cloudflare R2 (S3-compatible) client
   realtime/         Socket.io server
   audit/            Audit log writer
-  kafka/             (historical name — now holds the RabbitMQ client, see TRADEOFFS)
+  rabbitmq/         message queue
 interfaces/http/
   routes/           Express routers, one per module
   middleware/       requireAuth, requireTenant, requireTenantRole,
@@ -211,7 +211,7 @@ Uses Google Gemini (`gemini-flash-latest`), with:
   inverse on `/login` and `/register`, so an authenticated user can never
   navigate backward into the auth screens.
 - **Design language**: dark theme, warm-orange accent, pill-shaped buttons —
-  modeled after Outlier.ai's visual identity, per explicit design direction.
+  modeled after Outlier.ai's visual identity.
 
 ## 10. Known deliberate scope boundaries
 
