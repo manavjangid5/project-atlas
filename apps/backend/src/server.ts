@@ -27,6 +27,7 @@ import featureFlagsRouter from "./interfaces/http/routes/featureFlags";
 import { doubleCsrfProtection, generateCsrfToken } from "./interfaces/http/middleware/csrf";
 
 const app = express();
+app.set("trust proxy", 1);
 
 app.use(
   helmet({
