@@ -104,20 +104,21 @@ export default function DashboardLayout() {
             </Link>
           ))}
         </nav>
-
-        <button
-          onClick={handleLogout}
-          className="px-4 py-3 text-sm text-muted hover:text-danger text-left border-t border-border shrink-0"
-        >
-          Sign out
-        </button>
       </aside>
 
       <main className="flex-1 overflow-auto flex flex-col">
         <div className="flex items-center justify-between px-6 py-3 border-b border-border">
-          <GlobalSearchBar />
-          <NotificationBell />
-        </div>
+  <GlobalSearchBar />
+  <div className="flex items-center gap-4">
+    <NotificationBell />
+    <button
+      onClick={handleLogout}
+      className="text-sm text-muted hover:text-danger"
+    >
+      Sign out
+    </button>
+  </div>
+</div>
         <div className="flex-1 overflow-auto">
           <Outlet />
         </div>

@@ -52,11 +52,10 @@ router.post("/refresh", async (req, res) => {
 router.post("/logout", async (req, res) => {
   const token = req.cookies?.refreshToken;
   if (token) await authService.logout(token);
-  res.clearCookie("accessToken");
-  res.clearCookie("refreshToken");
+  res.clearCookie("accessToken", COOKIE_OPTS);
+  res.clearCookie("refreshToken", COOKIE_OPTS);
   res.json({ status: "ok" });
 });
-
 // OAuth: Google
 router.get("/google", passport.authenticate("google", { scope: ["profile", "email"], session: false }));
 
