@@ -30,6 +30,7 @@ export default function DashboardLayout() {
     setOrganizations,
     setActiveOrg,
     getActiveOrg,
+    setAuthenticated 
   } = useAuthStore();
   const [loading, setLoading] = useState(true);
 
@@ -40,9 +41,17 @@ export default function DashboardLayout() {
   }, []);
 
   async function handleLogout() {
+  try {
     await api.post("/auth/logout");
-    navigate("/login");
+  } catch {
+    // even if the backend call fails, still clear the client-side
+    // session state and navigate away — the user's intent to log out
+    // should never get stuck behind a failed network request
+  } finally {
+    setAuthenticated(false);
+    navigate("/login", { replace: true });
   }
+}
 
   if (loading) {
     return (
