@@ -11,8 +11,8 @@ export async function listMembers(): Promise<Member[]> {
   return res.data;
 }
 
-export async function inviteMember(email: string, role: string) {
-  const res = await api.post("/organizations/invitations", { email, role });
+export async function inviteMember(organizationId: string, email: string, role: string) {
+  const res = await api.post(`/organizations/${organizationId}/invitations`, { email, role });
   return res.data;
 }
 

@@ -15,6 +15,7 @@ import ApiKeysPage from "./features/apiKeys/ApiKeysPage";
 import FeatureFlagsPage from "./features/featureFlags/FeatureFlagsPage";
 import SharePage from "./features/files/SharePage";
 import RegisterPage from "./features/auth/RegisterPage";
+import AcceptInvitePage from "./features/organizations/AcceptInvitePage";
 
 export default function App() {
   return (
@@ -26,6 +27,7 @@ export default function App() {
         </Route>
 
         <Route path="/share/:token" element={<SharePage />} />
+        <Route path="/invitations/:token/accept" element={<AcceptInvitePage />} />
 
         <Route element={<RequireAuth />}>
           <Route path="/dashboard" element={<DashboardLayout />}>
