@@ -3,19 +3,23 @@ import { listWorkflows, createWorkflow } from "./workflowsApi";
 import type { Workflow } from "./workflowTypes";
 import WorkflowCanvas from "./WorkflowCanvas";
 import { Button } from "../../components/Button";
+import { useAuthStore } from "../../store/authStore";
 
 export default function WorkflowsPage() {
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [active, setActive] = useState<Workflow | null>(null);
   const [loading, setLoading] = useState(true);
   const [newName, setNewName] = useState("");
+  const activeOrgId = useAuthStore((s) => s.activeOrgId);
 
   useEffect(() => {
-    listWorkflows().then((wfs) => {
-      setWorkflows(wfs);
-      setLoading(false);
-    });
-  }, []);
+  setLoading(true);
+  setActive(null); // also close any open workflow canvas when switching orgs
+  listWorkflows().then((wfs) => {
+    setWorkflows(wfs);
+    setLoading(false);
+  });
+}, [activeOrgId]);
 
   async function handleCreate() {
     if (!newName.trim()) return;

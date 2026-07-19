@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { listFiles, uploadFile, getDownloadUrl, deleteFile, createShareLink } from "./filesApi";
 import type { FileAsset } from "./filesApi";
 import { Button } from "../../components/Button";
+import { useAuthStore } from "../../store/authStore";
+
 
 const FILE_ICONS: Record<string, string> = {
   "image/png": "🖼", "image/jpeg": "🖼", "image/gif": "🖼",
@@ -29,7 +31,8 @@ export default function FilesPage() {
     });
   }
 
-  useEffect(refresh, []);
+  const activeOrgId = useAuthStore((s) => s.activeOrgId);
+useEffect(refresh, [activeOrgId]);
 
   async function handleUpload(fileList: FileList | null) {
     if (!fileList || fileList.length === 0) return;

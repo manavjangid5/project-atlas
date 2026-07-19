@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { listApiKeys, createApiKey, revokeApiKey, getUsageStats } from "./apiKeysApi";
 import type { ApiKey } from "./apiKeysApi";
 import { Button } from "../../components/Button";
+import { useAuthStore } from "../../store/authStore";
 
 export default function ApiKeysPage() {
   const [keys, setKeys] = useState<ApiKey[]>([]);
@@ -14,7 +15,8 @@ export default function ApiKeysPage() {
     getUsageStats().then(setUsage);
   }
 
-  useEffect(refresh, []);
+  const activeOrgId = useAuthStore((s) => s.activeOrgId);
+useEffect(refresh, [activeOrgId]);
 
   async function handleCreate() {
     if (!newName.trim()) return;

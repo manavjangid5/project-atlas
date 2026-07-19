@@ -18,7 +18,8 @@ export default function MembersPage() {
     listMembers().then(setMembers);
   }
 
-  useEffect(refresh, []);
+  const activeOrgId = useAuthStore((s) => s.activeOrgId);
+useEffect(refresh, [activeOrgId]);
 
   async function handleInvite() {
     if (!inviteEmail.trim()) return;

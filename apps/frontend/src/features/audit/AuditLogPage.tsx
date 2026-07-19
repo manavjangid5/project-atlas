@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { fetchAuditLogs } from "./auditApi";
 import type { AuditLogEntry } from "./auditApi";
 import { Button } from "../../components/Button";
+import { useAuthStore } from "../../store/authStore";
 
 const ACTION_LABELS: Record<string, string> = {
   USER_LOGIN: "Signed in",
@@ -23,15 +24,25 @@ export default function AuditLogPage() {
   const [pages, setPages] = useState(1);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    setLoading(true);
-    fetchAuditLogs(page)
-      .then((res) => {
-        setLogs(res.logs);
-        setPages(res.pages);
-      })
-      .finally(() => setLoading(false));
-  }, [page]);
+  // useEffect(() => {
+  //   setLoading(true);
+  //   fetchAuditLogs(page)
+  //     .then((res) => {
+  //       setLogs(res.logs);
+  //       setPages(res.pages);
+  //     })
+  //     .finally(() => setLoading(false));
+  // }, [page]);
+  const activeOrgId = useAuthStore((s) => s.activeOrgId);
+useEffect(() => {
+  setPage(1);
+  setLoading(true);
+  fetchAuditLogs(1).then((res) => {
+    setLogs(res.logs);
+    setPages(res.pages);
+    setLoading(false);
+  });
+}, [activeOrgId, page]);
 
   return (
     <div className="p-8 max-w-4xl">

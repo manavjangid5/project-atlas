@@ -7,6 +7,7 @@ import { api } from "../lib/api";
 import NotificationBell from "../features/notifications/NotificationBell";
 import GlobalSearchBar from "../features/search/GlobalSearchBar";
 import OnboardingScreen from "../features/organizations/OnboardingScreen";
+import { createOrganization } from "../features/organizations/organizationsApi";
 
 const NAV_ITEMS = [
   { label: "Workflows", path: "/dashboard/workflows" },
@@ -34,6 +35,9 @@ export default function DashboardLayout() {
   } = useAuthStore();
   const [loading, setLoading] = useState(true);
 
+  const [showCreateOrg, setShowCreateOrg] = useState(false);
+const [newOrgName, setNewOrgName] = useState("");
+
   useEffect(() => {
     fetchOrganizations()
       .then(setOrganizations)
@@ -51,6 +55,16 @@ export default function DashboardLayout() {
     setAuthenticated(false);
     navigate("/login", { replace: true });
   }
+}
+
+async function handleCreateOrg() {
+  if (!newOrgName.trim()) return;
+  const org = await createOrganization(newOrgName.trim());
+  const orgWithRole = { ...org, role: "OWNER" };
+  setOrganizations([...organizations, orgWithRole]);
+  setActiveOrg(org.id);
+  setNewOrgName("");
+  setShowCreateOrg(false);
 }
 
   if (loading) {
@@ -73,20 +87,52 @@ export default function DashboardLayout() {
         </div>
 
         <div className="px-4 py-3 border-b border-border">
-          <label className="text-xs text-muted block mb-1">Organization</label>
-          <select
-            value={activeOrgId ?? ""}
-            onChange={(e) => setActiveOrg(e.target.value)}
-            className="w-full text-sm border border-border rounded-sm px-2 py-1.5 bg-bg text-text"
-          >
-            {organizations.map((org) => (
-              <option key={org.id} value={org.id}>
-                {org.name}
-              </option>
-            ))}
-          </select>
-          <p className="text-xs text-muted mt-1">{getActiveOrg()?.role}</p>
-        </div>
+  <label className="text-xs text-muted block mb-1">Organization</label>
+  <select
+    value={activeOrgId ?? ""}
+    onChange={(e) => {
+      if (e.target.value === "__create__") {
+        setShowCreateOrg(true);
+      } else {
+        setActiveOrg(e.target.value);
+      }
+    }}
+    className="w-full text-sm border border-border rounded-sm px-2 py-1.5 bg-bg text-text"
+  >
+    {organizations.map((org) => (
+      <option key={org.id} value={org.id}>
+        {org.name}
+      </option>
+    ))}
+    <option value="__create__">+ Create new organization</option>
+  </select>
+  <p className="text-xs text-muted mt-1">{getActiveOrg()?.role}</p>
+
+  {showCreateOrg && (
+    <div className="mt-2 flex gap-1">
+      <input
+        autoFocus
+        value={newOrgName}
+        onChange={(e) => setNewOrgName(e.target.value)}
+        onKeyDown={(e) => e.key === "Enter" && handleCreateOrg()}
+        placeholder="Org name"
+        className="flex-1 text-xs border border-border rounded-sm px-2 py-1 bg-bg"
+      />
+      <button
+        onClick={handleCreateOrg}
+        className="text-xs bg-accent text-white px-2 rounded-sm"
+      >
+        Add
+      </button>
+      <button
+        onClick={() => { setShowCreateOrg(false); setNewOrgName(""); }}
+        className="text-xs text-muted px-1"
+      >
+        ✕
+      </button>
+    </div>
+  )}
+</div>
 
         <nav className="flex-1 py-3 overflow-y-auto">
           {NAV_ITEMS.map((item) => (

@@ -4,6 +4,7 @@ import type { FormSchemaModel, FormField } from "./formTypes";
 import FieldEditorRow from "./FieldEditorRow";
 import FormPreview from "./FormPreview";
 import { Button } from "../../components/Button";
+import { useAuthStore } from "../../store/authStore";
 
 function newField(): FormField {
   return { id: `field_${Date.now()}`, label: "", type: "text" };
@@ -15,10 +16,15 @@ export default function FormsPage() {
   const [fields, setFields] = useState<FormField[]>([]);
   const [newName, setNewName] = useState("");
   const [saving, setSaving] = useState(false);
+  const activeOrgId = useAuthStore((s) => s.activeOrgId);
+useEffect(() => {
+  setActive(null);
+  listForms().then(setForms);
+}, [activeOrgId]);
 
-  useEffect(() => {
-    listForms().then(setForms);
-  }, []);
+  // useEffect(() => {
+  //   listForms().then(setForms);
+  // }, []);
 
   async function handleCreate() {
     if (!newName.trim()) return;

@@ -6,6 +6,7 @@ import ConditionNodeEditor from "./ConditionNodeEditor";
 import RuleActionEditor from "./RuleActionEditor";
 import RuleTestPanel from "./RuleTestPanel";
 import { Button } from "../../components/Button";
+import { useAuthStore } from "../../store/authStore";
 
 export default function RulesPage() {
   const [rules, setRules] = useState<RuleModel[]>([]);
@@ -13,9 +14,14 @@ export default function RulesPage() {
   const [newName, setNewName] = useState("");
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    listRules().then(setRules);
-  }, []);
+  const activeOrgId = useAuthStore((s) => s.activeOrgId);
+useEffect(() => {
+  setActive(null);
+  listRules().then(setRules);
+}, [activeOrgId]);
+  // useEffect(() => {
+  //   listRules().then(setRules);
+  // }, []);
 
   async function handleCreate() {
     if (!newName.trim()) return;

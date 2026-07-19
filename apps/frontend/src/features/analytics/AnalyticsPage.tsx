@@ -6,6 +6,7 @@ import {
 import { fetchOverview, fetchNodeUsage, fetchDailyExecutions, fetchActiveUsers } from "./analyticsApi";
 import type { Overview } from "./analyticsApi";
 import StatCard from "./StatCard";
+import { useAuthStore } from "../../store/authStore";
 
 const PIE_COLORS = ["#E8622C", "#4A9E8E", "#C2A83E", "#7B6BA8", "#4A7FA8", "#A85C7B"];
 
@@ -15,12 +16,20 @@ export default function AnalyticsPage() {
   const [dailyExec, setDailyExec] = useState<{ date: string; count: number }[]>([]);
   const [activeUsers, setActiveUsers] = useState<{ user?: { email: string }; actionCount: number }[]>([]);
 
-  useEffect(() => {
-    fetchOverview().then(setOverview);
-    fetchNodeUsage().then(setNodeUsage);
-    fetchDailyExecutions().then(setDailyExec);
-    fetchActiveUsers().then(setActiveUsers);
-  }, []);
+  // useEffect(() => {
+  //   fetchOverview().then(setOverview);
+  //   fetchNodeUsage().then(setNodeUsage);
+  //   fetchDailyExecutions().then(setDailyExec);
+  //   fetchActiveUsers().then(setActiveUsers);
+  // }, []);
+
+  const activeOrgId = useAuthStore((s) => s.activeOrgId);
+useEffect(() => {
+  fetchOverview().then(setOverview);
+  fetchNodeUsage().then(setNodeUsage);
+  fetchDailyExecutions().then(setDailyExec);
+  fetchActiveUsers().then(setActiveUsers);
+}, [activeOrgId]);
 
   return (
     <div className="p-8 max-w-5xl">
