@@ -4,9 +4,11 @@ import { startHealthServer } from "./healthServer";
 import { connectConsumer, QUEUE_NAME } from "./rabbitmqConsumer";
 import { executeGraph } from "./graphExecutor";
 import { prisma } from "./db";
+import { startKeepAlive } from "./keepAlive";
 
 async function main() {
   startHealthServer(); 
+  startKeepAlive();
   
   const channel = await connectConsumer();
   console.log(`Worker listening on queue "${QUEUE_NAME}"...`);

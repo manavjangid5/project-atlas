@@ -25,6 +25,7 @@ import rateLimit from "express-rate-limit";
 import searchRouter from "./interfaces/http/routes/search";
 import featureFlagsRouter from "./interfaces/http/routes/featureFlags";
 import { doubleCsrfProtection, generateCsrfToken } from "./interfaces/http/middleware/csrf";
+import { startKeepAlive } from "./infrastructure/keepAlive";
 
 const app = express();
 app.set("trust proxy", 1);
@@ -89,3 +90,4 @@ const server = app.listen(PORT, () => {
 });
 
 initSocketServer(server);
+startKeepAlive();
