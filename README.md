@@ -2,8 +2,9 @@
 
 **AI-powered collaborative workflow automation platform** — a self-hosted alternative to Zapier/n8n with a first-class AI node, built as a multi-tenant SaaS with organizations, roles, dynamic forms, a rules engine, and full observability.
 
-🔗 **Live app:** [https://project-atlas-frontend.onrender.com](https://project-atlas-frontend.onrender.com) *(replace with real URL)*
-🔗 **Live API:** [https://project-atlas-vupz.onrender.com/api/v1/health](https://project-atlas-vupz.onrender.com/api/v1/health) *(replace with real URL)*
+🔗 **Live app:** [https://project-atlas-frontend.onrender.com](https://project-atlas-frontend.onrender.com) 
+
+🔗 **Live API:** [https://project-atlas-vupz.onrender.com/api/v1/health](https://project-atlas-vupz.onrender.com/api/v1/health) 
 
 ---
 
