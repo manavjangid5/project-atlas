@@ -1,35 +1,38 @@
+import dotenv from "dotenv";
+dotenv.config();
+
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 import cookieParser from "cookie-parser";
-import dotenv from "dotenv";
-dotenv.config();
-import healthRouter from "./interfaces/http/routes/health";
-import { errorHandler } from "./interfaces/http/middleware/errorHandler";
+import rateLimit from "express-rate-limit";
 
+import { doubleCsrfProtection, generateCsrfToken } from "./interfaces/http/middleware/csrf";
+import { errorHandler } from "./interfaces/http/middleware/errorHandler";
 import passport from "./infrastructure/auth/passport";
+import { initSocketServer } from "./infrastructure/realtime/socketServer";
+import { startKeepAlive } from "./infrastructure/keepAlive";
+
+import healthRouter from "./interfaces/http/routes/health";
 import authRouter from "./interfaces/http/routes/auth";
 import organizationsRouter from "./interfaces/http/routes/organizations";
 import workflowsRouter from "./interfaces/http/routes/workflows";
-import auditRouter from "./interfaces/http/routes/audit";
 import formsRouter from "./interfaces/http/routes/forms";
 import rulesRouter from "./interfaces/http/routes/rules";
-import internalRouter from "./interfaces/http/routes/internal";
-import notificationsRouter from "./interfaces/http/routes/notifications";
-import { initSocketServer } from "./infrastructure/realtime/socketServer";
+import auditRouter from "./interfaces/http/routes/audit";
 import analyticsRouter from "./interfaces/http/routes/analytics";
 import filesRouter from "./interfaces/http/routes/files";
 import apiKeysRouter from "./interfaces/http/routes/apiKeys";
-import rateLimit from "express-rate-limit";
-import searchRouter from "./interfaces/http/routes/search";
 import featureFlagsRouter from "./interfaces/http/routes/featureFlags";
-import { doubleCsrfProtection, generateCsrfToken } from "./interfaces/http/middleware/csrf";
-import { startKeepAlive } from "./infrastructure/keepAlive";
+import searchRouter from "./interfaces/http/routes/search";
+import notificationsRouter from "./interfaces/http/routes/notifications";
+import internalRouter from "./interfaces/http/routes/internal";
 
 const app = express();
 app.set("trust proxy", 1);
 
+// 1. Security headers
 app.use(
   helmet({
     contentSecurityPolicy: {
@@ -38,56 +41,63 @@ app.use(
         connectSrc: ["'self'", process.env.FRONTEND_URL || "http://localhost:5173"],
       },
     },
-    crossOriginResourcePolicy: { policy: "cross-origin" }, // needed since R2 file URLs are cross-origin
+    crossOriginResourcePolicy: { policy: "cross-origin" },
   })
 );
 
-const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  limit: 300, // generous — auth routes already have their own stricter limiter
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-app.use("/api/v1", globalLimiter);
+// 2. CORS
 app.use(cors({ origin: process.env.FRONTEND_URL || "http://localhost:5173", credentials: true }));
+
+// 3. Body/cookie parsing
 app.use(express.json());
 app.use(cookieParser());
 app.use(morgan("dev"));
 
-app.use("/api/v1", healthRouter);
+// 4. Global rate limit
+app.use("/api/v1", rateLimit({ windowMs: 15 * 60 * 1000, limit: 300, standardHeaders: true, legacyHeaders: false }));
 
-app.use(errorHandler);
-app.use(passport.initialize());
-app.use("/api/v1/auth", authRouter);
-app.use("/api/v1", organizationsRouter);
-app.use("/api/v1", workflowsRouter);
-app.use("/api/v1", auditRouter);
-app.use("/api/v1", formsRouter);
-app.use("/api/v1", rulesRouter);
-app.use("/api/v1", internalRouter);
-app.use("/api/v1", notificationsRouter);
-app.use("/api/v1", analyticsRouter);
-app.use("/api/v1", filesRouter);
-app.use("/api/v1", apiKeysRouter);
-app.use("/api/v1", searchRouter);
-app.use("/api/v1", featureFlagsRouter);
+// 5. CSRF token issuance - public, must exist before protection is enforced
 app.get("/api/v1/csrf-token", (req, res) => {
-  const token = generateCsrfToken(req, res);
-  res.json({ csrfToken: token });
+  res.json({ csrfToken: generateCsrfToken(req, res) });
 });
+
+// 6. CSRF protection - runs BEFORE every router, on every mutating request, except the auth entry points that can't have a token yet.
 app.use((req, res, next) => {
-  const exemptPaths = ["/api/v1/auth/login", "/api/v1/auth/register", "/api/v1/auth/refresh"];
-  const isExempt = exemptPaths.includes(req.path) || req.path.startsWith("/api/v1/auth/google") || req.path.startsWith("/api/v1/auth/github");
-  if (isExempt || req.method === "GET") return next();
+  const exempt =
+    req.method === "GET" ||
+    ["/api/v1/auth/login", "/api/v1/auth/register", "/api/v1/auth/refresh"].includes(req.path) ||
+    req.path.startsWith("/api/v1/auth/google") ||
+    req.path.startsWith("/api/v1/auth/github") ||
+    req.path.startsWith("/api/v1/internal");
+  if (exempt) return next();
   return doubleCsrfProtection(req, res, next);
 });
 
+app.use(passport.initialize());
+
+// 7. Routers - mounted AFTER CSRF protection is active
+app.use("/api/v1", healthRouter);
+app.use("/api/v1/auth", authRouter);
+app.use("/api/v1", organizationsRouter);
+app.use("/api/v1", workflowsRouter);
+app.use("/api/v1", formsRouter);
+app.use("/api/v1", rulesRouter);
+app.use("/api/v1", auditRouter);
+app.use("/api/v1", analyticsRouter);
+app.use("/api/v1", filesRouter);
+app.use("/api/v1", apiKeysRouter);
+app.use("/api/v1", featureFlagsRouter);
+app.use("/api/v1", searchRouter);
+app.use("/api/v1", notificationsRouter);
+app.use("/api/v1", internalRouter);
+
+// 8. 404 for anything unmatched
+app.use((req, res) => res.status(404).json({ error: "Not found" }));
+
+// 9. Error handler - MUST be last, 4-arg signature
+app.use(errorHandler);
+
 const PORT = process.env.PORT || 4000;
-
-const server = app.listen(PORT, () => {
-  console.log(`Backend running on http://localhost:${PORT}`);
-});
-
+const server = app.listen(PORT, () => console.log(`Backend running on port ${PORT}`));
 initSocketServer(server);
 startKeepAlive();

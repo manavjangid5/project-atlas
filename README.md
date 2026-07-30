@@ -1,9 +1,11 @@
 # Project Atlas
 
-**AI-powered collaborative workflow automation platform** — a self-hosted alternative to Zapier/n8n with a first-class AI node, built as a multi-tenant SaaS with organizations, roles, dynamic forms, a rules engine, and full observability.
+**AI-powered collaborative workflow automation platform** — a self-hosted alternative to Zapier/n8n with a first-class AI node, built as a multi-tenant SaaS with organizations, roles, dynamic forms, and a rules engine.
 
-🔗 **Live app:** [https://project-atlas-frontend.onrender.com](https://project-atlas-frontend.onrender.com) *(replace with real URL)*
-🔗 **Live API:** [https://project-atlas-vupz.onrender.com/api/v1/health](https://project-atlas-vupz.onrender.com/api/v1/health) *(replace with real URL)*
+Observability is currently structured request logging (morgan) and per-node execution logs, not centralized metrics — Prometheus/Grafana are not yet implemented.
+
+🔗 **Live app:** [https://project-atlas-frontend.onrender.com](https://project-atlas-frontend.onrender.com)
+🔗 **Live API:** [https://project-atlas-vupz.onrender.com/api/v1/health](https://project-atlas-vupz.onrender.com/api/v1/health)
 
 ---
 
@@ -88,6 +90,8 @@ logging in — useful for sending a file to someone outside your organization.
 Generate keys for programmatic/external access to your organization's data
 (the raw key is shown exactly once, like Stripe or GitHub tokens). Also
 shows request-usage stats so you can see how actively a key is being used.
+Key issuance, revocation, and usage tracking are implemented; 
+requireApiKey middleware exists but is not yet mounted on a public API surface - see [docs/TRADEOFFS.md](https://github.com/manavjangid5/project-atlas/blob/main/docs/TRADEOFFS.md).
 
 ### Feature Flags
 Turn platform features on/off — either globally, for specific organizations,
@@ -102,9 +106,7 @@ debugging ("who changed what, and when").
 ### Members
 See everyone in your organization and their role (Owner/Admin/Developer/
 Viewer). Owners and Admins can invite new members by email, change roles, or
-remove people. Roles are enforced on the backend, not just hidden in the UI —
-a Viewer genuinely cannot perform Admin actions even by calling the API
-directly.
+remove people. Roles are enforced on the backend, not just hidden in the UI. Viewer is read-only; Owner, Admin, and Developer can create and modify.
 
 ### Settings
 Organization-level configuration — currently the organization's display
@@ -139,6 +141,5 @@ across all three packages via GitHub Actions (`.github/workflows/ci.yml`).
 ## Testing
 
 Unit tests (Jest) cover the rule engine, JWT/token utilities, and the
-workflow graph executor. An end-to-end test (Playwright) covers the full
-login → build workflow → run → verify result journey. See
+workflow graph executor. One Playwright smoke test covers the core login → build → run journey; this is not full e2e coverage. See
 [docs/TRADEOFFS.md](https://github.com/manavjangid5/project-atlas/blob/main/docs/TRADEOFFS.md) for the reasoning behind this test scope.

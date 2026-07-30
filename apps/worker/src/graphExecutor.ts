@@ -122,10 +122,11 @@ export async function executeGraph(runId: string, graph: Graph) {
   });
 
   try {
-    await axios.post(`${process.env.BACKEND_URL || "http://localhost:4000"}/api/v1/internal/notify`, {
-      runId,
-      status: finalStatus,
-    });
+    await axios.post(
+      `${process.env.BACKEND_URL}/api/v1/internal/notify`,
+      { runId, status: finalStatus },
+      { headers: { "X-Internal-Secret": process.env.INTERNAL_SERVICE_SECRET } }
+    );
   } catch (err) {
     console.error("Failed to notify backend of run completion:", err);
   }

@@ -61,6 +61,8 @@ export async function softDeleteFile(organizationId: string, id: string) {
 }
 
 export async function restoreFile(organizationId: string, id: string) {
+  const file = await prisma.fileAsset.findFirst({ where: { id, organizationId } });
+  if (!file) throw new AppError(404, "File not found");
   return prisma.fileAsset.update({ where: { id }, data: { deletedAt: null } });
 }
 

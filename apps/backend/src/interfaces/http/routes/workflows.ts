@@ -1,13 +1,10 @@
 import { Router } from "express";
 import { requireAuth } from "../middleware/auth";
-import { requireTenant, TenantRequest } from "../middleware/tenant";
+import { requireTenant, TenantRequest, requireTenantRole } from "../middleware/tenant";
 import * as workflowService from "../../../application/workflowService";
 
 const router = Router();
 
-// Express 5's param typing can widen to string | string[] in some
-// route configurations. Since none of our routes actually use
-// repeating/array params, this helper safely narrows to a single string.
 function paramStr(value: string | string[] | undefined): string {
   return Array.isArray(value) ? value[0] : (value as string);
 }
@@ -22,12 +19,12 @@ router.get("/workflows/:id", requireAuth, requireTenant, async (req: TenantReque
   res.json(wf);
 });
 
-router.post("/workflows", requireAuth, requireTenant, async (req: TenantRequest, res) => {
+router.post("/workflows", requireAuth, requireTenant, requireTenantRole("OWNER", "ADMIN", "DEVELOPER"), async (req: TenantRequest, res) => {
   const wf = await workflowService.createWorkflow(req.tenant!.organizationId, req.body.name);
   res.status(201).json(wf);
 });
 
-router.patch("/workflows/:id", requireAuth, requireTenant, async (req: TenantRequest, res) => {
+router.patch("/workflows/:id", requireAuth, requireTenant, requireTenantRole("OWNER", "ADMIN", "DEVELOPER"), async (req: TenantRequest, res) => {
   const wf = await workflowService.updateWorkflowGraph(
     req.tenant!.organizationId,
     paramStr(req.params.id),
@@ -36,12 +33,12 @@ router.patch("/workflows/:id", requireAuth, requireTenant, async (req: TenantReq
   res.json(wf);
 });
 
-router.delete("/workflows/:id", requireAuth, requireTenant, async (req: TenantRequest, res) => {
+router.delete("/workflows/:id", requireAuth, requireTenant, requireTenantRole("OWNER", "ADMIN", "DEVELOPER"), async (req: TenantRequest, res) => {
   await workflowService.softDeleteWorkflow(req.tenant!.organizationId, paramStr(req.params.id));
   res.status(204).send();
 });
 
-router.post("/workflows/:id/run", requireAuth, requireTenant, async (req: TenantRequest, res) => {
+router.post("/workflows/:id/run", requireAuth, requireTenant, requireTenantRole("OWNER", "ADMIN", "DEVELOPER"), async (req: TenantRequest, res) => {
   const run = await workflowService.triggerWorkflowRun(req.tenant!.organizationId, paramStr(req.params.id));
   res.status(202).json({ runId: run.id, status: run.status });
 });

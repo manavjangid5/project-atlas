@@ -1,5 +1,6 @@
 import axios from "axios";
-
+import { assertSafeUrl } from "./urlSafety";
+import { executeAiPrompt } from "./aiNode";
 export interface ExecutionContext {
   variables: Record<string, any>;
 }
@@ -12,18 +13,14 @@ export interface NodeResult {
 
 async function executeHttpRequest(config: any, ctx: ExecutionContext): Promise<NodeResult> {
   try {
-    const res = await axios({
-      method: config.method || "GET",
-      url: config.url,
-      data: config.body,
-      headers: config.headers,
-      timeout: config.timeoutMs || 10000,
-    });
+    await assertSafeUrl(config.url);
+    const res = await axios({ method: config.method || "GET", url: config.url, data: config.body, headers: config.headers, timeout: config.timeoutMs || 10000 });
     return { status: "SUCCESS", output: res.data };
   } catch (err: any) {
     return { status: "FAILED", error: err.message };
   }
 }
+
 
 async function executeDelay(config: any): Promise<NodeResult> {
   const ms = Math.min(config.durationMs || 1000, 30000); // hard cap to avoid runaway workers
@@ -54,6 +51,7 @@ async function executeSlack(config: any): Promise<NodeResult> {
   const webhookUrl = config.webhookUrl || process.env.SLACK_WEBHOOK_URL;
   if (!webhookUrl) return { status: "FAILED", error: "No Slack webhook configured" };
   try {
+    await assertSafeUrl(webhookUrl);
     await axios.post(webhookUrl, { text: config.message || "Workflow notification" });
     return { status: "SUCCESS" };
   } catch (err: any) {
@@ -65,9 +63,7 @@ async function executeWebhook(config: any): Promise<NodeResult> {
   return executeHttpRequest({ ...config, method: config.method || "POST" }, { variables: {} });
 }
 
-// AI node execution lives in aiNode.ts — kept separate since it has
-// its own streaming/fallback/caching concerns (see next message).
-import { executeAiPrompt } from "./aiNode";
+// AI node execution lives in aiNode.ts 
 
 export async function executeNode(kind: string, config: any, ctx: ExecutionContext): Promise<NodeResult> {
   switch (kind) {

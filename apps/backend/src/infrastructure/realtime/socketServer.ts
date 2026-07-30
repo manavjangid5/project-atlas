@@ -1,6 +1,7 @@
 import { Server as HttpServer } from "http";
 import { Server as SocketIOServer } from "socket.io";
 import { verifyAccessToken } from "../auth/tokens";
+import { prisma } from "../database/prismaClient";
 
 let io: SocketIOServer | null = null;
 
@@ -19,10 +20,7 @@ export function initSocketServer(httpServer: HttpServer) {
   });
 
   io.on("connection", (socket) => {
-    // Read the httpOnly accessToken cookie directly from the raw
-    // handshake headers — the browser attaches it automatically
-    // (same as any XHR/fetch call), so no client-side token handling
-    // is needed or even possible, matching how our REST auth works.
+    
     const cookieHeader = socket.handshake.headers.cookie;
     const token = parseCookie(cookieHeader, "accessToken");
 
@@ -32,11 +30,26 @@ export function initSocketServer(httpServer: HttpServer) {
 
       socket.data.userId = payload.id;
       socket.emit("authenticated", { ok: true });
+      
+      socket.on("join-org", async (organizationId: string) => {
+        const membership = await prisma.membership.findUnique({
+          where: {
+            userId_organizationId: {
+              userId: payload.id,
+              organizationId,
+            },
+          },
+        });
 
-      socket.on("join-org", (organizationId: string) => {
+        if (!membership) {
+          socket.emit("join-org-denied", { organizationId });
+          return;
+        }
+
         socket.join(`org:${organizationId}`);
         socket.join(`user:${payload.id}`);
       });
+
     } catch {
       socket.emit("authenticated", { ok: false });
     }

@@ -1,10 +1,11 @@
 import { Router } from "express";
 import { prisma } from "../../../infrastructure/database/prismaClient";
 import { createNotification } from "../../../application/notificationService";
+import { requireInternalSecret } from "../middleware/internalAuth";
 
 const router = Router();
 
-router.post("/internal/notify", async (req, res) => {
+router.post("/internal/notify", requireInternalSecret, async (req, res) => {
   const { runId, status } = req.body;
   const run = await prisma.executionRun.findUnique({
     where: { id: runId },
