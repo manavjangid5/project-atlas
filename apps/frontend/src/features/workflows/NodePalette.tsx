@@ -7,6 +7,7 @@ const PALETTE_ITEMS: { kind: NodeKind; label: string }[] = [
   { kind: "slack", label: "Slack" },
   { kind: "ai_prompt", label: "AI Prompt" },
   { kind: "webhook", label: "Webhook" },
+  { kind: "github", label: "GitHub" }
 ];
 
 export default function NodePalette() {

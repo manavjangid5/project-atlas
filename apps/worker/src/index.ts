@@ -16,7 +16,8 @@ async function main() {
   channel.consume(QUEUE_NAME, async (msg) => {
     if (!msg) return;
     const payload = JSON.parse(msg.content.toString());
-    const { runId, graph } = payload;
+    const { runId, graph, initialPayload } = payload;
+    const status = await executeGraph(runId, graph, initialPayload);
 
     console.log(`Executing run ${runId}...`);
     try {

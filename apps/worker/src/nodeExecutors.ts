@@ -63,6 +63,24 @@ async function executeWebhook(config: any): Promise<NodeResult> {
   return executeHttpRequest({ ...config, method: config.method || "POST" }, { variables: {} });
 }
 
+async function executeGithub(config: any): Promise<NodeResult> {
+  try {
+    const { owner, repo, action } = config;
+    if (!owner || !repo) return { status: "FAILED", error: "GitHub node requires owner and repo" };
+
+    const url =
+      action === "latest_release"
+        ? `https://api.github.com/repos/${owner}/${repo}/releases/latest`
+        : `https://api.github.com/repos/${owner}/${repo}/commits?per_page=5`;
+
+    await assertSafeUrl(url);
+    const res = await axios.get(url, { headers: { "User-Agent": "project-atlas-workflow" } });
+    return { status: "SUCCESS", output: res.data };
+  } catch (err: any) {
+    return { status: "FAILED", error: err.message };
+  }
+}
+
 // AI node execution lives in aiNode.ts 
 
 export async function executeNode(kind: string, config: any, ctx: ExecutionContext): Promise<NodeResult> {
@@ -73,6 +91,7 @@ export async function executeNode(kind: string, config: any, ctx: ExecutionConte
     case "slack": return executeSlack(config);
     case "webhook": return executeWebhook(config);
     case "ai_prompt": return executeAiPrompt(config, ctx);
+    case "github": return executeGithub(config);
     default: return { status: "FAILED", error: `Unknown node kind: ${kind}` };
   }
 }

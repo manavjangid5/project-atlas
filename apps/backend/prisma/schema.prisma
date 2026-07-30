@@ -81,6 +81,7 @@ model Workflow {
   deletedAt      DateTime?         // soft delete
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
+  webhookToken String? @unique
 
   @@index([organizationId])
 }

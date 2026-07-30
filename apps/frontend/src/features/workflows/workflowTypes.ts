@@ -4,7 +4,8 @@ export type NodeKind =
   | "conditional"
   | "slack"
   | "ai_prompt"
-  | "webhook";
+  | "webhook"
+  | "github";
 
 export interface WorkflowNodeData {
   label: string;
@@ -30,6 +31,7 @@ export interface Workflow {
   id: string;
   name: string;
   graph: WorkflowGraph;
+  webhookToken: string;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;

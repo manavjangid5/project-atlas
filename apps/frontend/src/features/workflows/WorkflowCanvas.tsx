@@ -125,9 +125,15 @@ function CanvasInner({ workflow }: Props) {
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <h2 className="text-sm font-semibold">{workflow.name}</h2>
           <div className="flex gap-2">
+            <span className="text-xs text-muted">
+              Webhook: {import.meta.env.VITE_API_URL}/webhooks/{workflow.webhookToken}
+            </span>
             <Button
               variant="secondary"
-              onClick={() => { setShowRuns(!showRuns); setSelectedNode(null); }}
+              onClick={() => {
+                setShowRuns(!showRuns);
+                setSelectedNode(null);
+              }}
             >
               {showRuns ? "Hide Runs" : "View Runs"}
             </Button>
@@ -137,7 +143,12 @@ function CanvasInner({ workflow }: Props) {
             <Button onClick={handleRun}>Run</Button>
           </div>
         </div>
-        <div className="flex-1" ref={reactFlowWrapper} onDragOver={onDragOver} onDrop={onDrop}>
+        <div
+          className="flex-1"
+          ref={reactFlowWrapper}
+          onDragOver={onDragOver}
+          onDrop={onDrop}
+        >
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -169,7 +180,9 @@ function CanvasInner({ workflow }: Props) {
           onDelete={handleNodeDelete}
         />
       )}
-      {showRuns && !selectedNode && <RunHistoryPanel workflowId={workflow.id} />}
+      {showRuns && !selectedNode && (
+        <RunHistoryPanel workflowId={workflow.id} />
+      )}
     </div>
   );
 }
