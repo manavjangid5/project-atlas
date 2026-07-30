@@ -18,12 +18,18 @@ interface Props {
 export default function CustomNode({ id, data }: Props) {
   function handleDelete(e: React.MouseEvent) {
     e.stopPropagation(); // prevent this click from also opening the config panel
-    window.dispatchEvent(new CustomEvent("atlas-delete-node", { detail: { nodeId: id } }));
+    window.dispatchEvent(
+      new CustomEvent("atlas-delete-node", { detail: { nodeId: id } }),
+    );
   }
 
   return (
     <div className="group relative bg-surface border border-border rounded-md px-4 py-3 min-w-[160px] shadow-lg">
-      <Handle type="target" position={Position.Left} className="!bg-accent !w-2 !h-2" />
+      <Handle
+        type="target"
+        position={Position.Left}
+        className="!bg-accent !w-2 !h-2"
+      />
 
       <button
         onClick={handleDelete}
@@ -37,8 +43,33 @@ export default function CustomNode({ id, data }: Props) {
         <span>{KIND_ICONS[data.kind] || "⚙"}</span>
         <span className="text-sm font-semibold">{data.label}</span>
       </div>
-      <p className="text-xs text-muted mt-1 capitalize">{data.kind.replace("_", " ")}</p>
-      <Handle type="source" position={Position.Right} className="!bg-accent !w-2 !h-2" />
+      <p className="text-xs text-muted mt-1 capitalize">
+        {data.kind.replace("_", " ")}
+      </p>
+      {data.kind === "conditional" ? (
+        <>
+          <Handle
+            type="source"
+            position={Position.Right}
+            id="true"
+            style={{ top: "35%" }}
+            className="!bg-green-500 !w-2 !h-2"
+          />
+          <Handle
+            type="source"
+            position={Position.Right}
+            id="false"
+            style={{ top: "65%" }}
+            className="!bg-danger !w-2 !h-2"
+          />
+        </>
+      ) : (
+        <Handle
+          type="source"
+          position={Position.Right}
+          className="!bg-accent !w-2 !h-2"
+        />
+      )}
     </div>
   );
 }

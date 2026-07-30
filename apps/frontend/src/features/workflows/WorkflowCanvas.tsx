@@ -37,9 +37,17 @@ function CanvasInner({ workflow }: Props) {
   const idCounter = useRef(0);
 
   const onConnect = useCallback(
-    (connection: Connection) => setEdges((eds) => addEdge(connection, eds)),
-    [setEdges]
-  );
+  (connection: Connection) => {
+    const sourceNode = nodes.find((n) => n.id === connection.source);
+    const isConditional = sourceNode?.data?.kind === "conditional";
+    const edge = {
+      ...connection,
+      data: isConditional ? { branch: connection.sourceHandle === "false" ? "false" : "true" } : undefined,
+    };
+    setEdges((eds) => addEdge(edge, eds));
+  },
+  [setEdges, nodes]
+);
   useEffect(() => {
     function handleDeleteEvent(e: Event) {
       const nodeId = (e as CustomEvent).detail?.nodeId;

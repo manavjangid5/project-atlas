@@ -1,7 +1,7 @@
 import { prisma } from "./db";
 import { executeNode } from "./nodeExecutors";
 import type { ExecutionContext } from "./nodeExecutors";
-import axios from "axios";
+
 interface GraphNode {
   id: string;
   data: { kind: string; config: Record<string, any> };
@@ -10,6 +10,7 @@ interface GraphEdge {
   id: string;
   source: string;
   target: string;
+  data?: { branch?: "true" | "false" };
 }
 interface Graph {
   nodes: GraphNode[];
@@ -23,24 +24,8 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function buildAdjacency(graph: Graph) {
-  const incoming = new Map<string, string[]>();
-  const outgoing = new Map<string, string[]>();
-  for (const node of graph.nodes) {
-    incoming.set(node.id, []);
-    outgoing.set(node.id, []);
-  }
-  for (const edge of graph.edges) {
-    outgoing.get(edge.source)?.push(edge.target);
-    incoming.get(edge.target)?.push(edge.source);
-  }
-  return { incoming, outgoing };
-}
-
 async function logNode(runId: string, nodeId: string, status: string, message?: string) {
-  await prisma.executionLog.create({
-    data: { runId, nodeId, status, message },
-  });
+  await prisma.executionLog.create({ data: { runId, nodeId, status, message } });
 }
 
 async function runNodeWithRetry(node: GraphNode, ctx: ExecutionContext, runId: string) {
@@ -57,7 +42,7 @@ async function runNodeWithRetry(node: GraphNode, ctx: ExecutionContext, runId: s
     attempt++;
     await logNode(runId, node.id, "RETRYING", `Attempt ${attempt} failed: ${result.error}`);
     if (attempt < MAX_RETRIES) {
-      await sleep(BASE_BACKOFF_MS * 2 ** attempt); // exponential backoff
+      await sleep(BASE_BACKOFF_MS * 2 ** attempt);
     } else {
       await logNode(runId, node.id, "FAILED", result.error);
       return result;
@@ -65,71 +50,93 @@ async function runNodeWithRetry(node: GraphNode, ctx: ExecutionContext, runId: s
   }
 }
 
-// Walks the graph in topological order, running independent branches
-// (nodes whose dependencies are already satisfied) in parallel via
-// Promise.all — this is what satisfies "parallel execution of
-// independent branches" from the spec, without needing a full DAG
-// scheduler library.
 export async function executeGraph(runId: string, graph: Graph) {
   await prisma.executionRun.update({ where: { id: runId }, data: { status: "RUNNING" } });
 
-  const { incoming, outgoing } = buildAdjacency(graph);
+  const incoming = new Map<string, GraphEdge[]>();
+  for (const node of graph.nodes) incoming.set(node.id, []);
+  for (const edge of graph.edges) incoming.get(edge.target)?.push(edge);
+
   const completed = new Set<string>();
   const failed = new Set<string>();
+  const skipped = new Set<string>();
+  // Records which branch a conditional node actually took, once it's run.
+  const branchDecisions = new Map<string, "true" | "false">();
   const ctx: ExecutionContext = { variables: {} };
-
   const nodeMap = new Map(graph.nodes.map((n) => [n.id, n]));
 
-  async function isReady(nodeId: string) {
-    const deps = incoming.get(nodeId) || [];
-    return deps.every((d) => completed.has(d) || failed.has(d));
+  function edgeSatisfied(edge: GraphEdge): "yes" | "no" | "pending" {
+    if (failed.has(edge.source)) return "no";
+    if (skipped.has(edge.source)) return "no";
+    if (!completed.has(edge.source)) return "pending";
+    // Source completed — if this edge is a labeled conditional branch,
+    // only "satisfied" if it matches the branch the source actually took.
+    if (edge.data?.branch) {
+      const taken = branchDecisions.get(edge.source);
+      return taken === edge.data.branch ? "yes" : "no";
+    }
+    return "yes";
+  }
+
+  function isReady(nodeId: string): "ready" | "skip" | "wait" {
+    const edges = incoming.get(nodeId) || [];
+    if (edges.length === 0) return "ready";
+    const results = edges.map(edgeSatisfied);
+    if (results.some((r) => r === "pending")) return "wait";
+    // Ready if at least one incoming path is genuinely satisfied.
+    if (results.some((r) => r === "yes")) return "ready";
+    return "skip"; // every incoming path failed or took the wrong branch
   }
 
   let remaining = new Set(graph.nodes.map((n) => n.id));
 
   while (remaining.size > 0) {
     const ready: string[] = [];
+    const toSkip: string[] = [];
+
     for (const nodeId of remaining) {
-      if (await isReady(nodeId)) ready.push(nodeId);
+      const state = isReady(nodeId);
+      if (state === "ready") ready.push(nodeId);
+      else if (state === "skip") toSkip.push(nodeId);
     }
 
-    if (ready.length === 0) break; // cycle or unresolved dependency — stop safely
+    for (const nodeId of toSkip) {
+      await logNode(runId, nodeId, "SKIPPED", "Upstream failed, or the branch condition was not taken");
+      skipped.add(nodeId);
+      remaining.delete(nodeId);
+    }
+
+    if (ready.length === 0) break; // nothing left to run — remaining nodes are stuck on a real cycle
 
     await Promise.all(
       ready.map(async (nodeId) => {
         const node = nodeMap.get(nodeId)!;
-        const depsFailed = (incoming.get(nodeId) || []).some((d) => failed.has(d));
-        if (depsFailed) {
-          await logNode(runId, nodeId, "SKIPPED", "Upstream node failed");
-          failed.add(nodeId);
-          remaining.delete(nodeId);
-          return;
-        }
-
         const result = await runNodeWithRetry(node, ctx, runId);
-        if (result?.status === "SUCCESS") completed.add(nodeId);
-        else failed.add(nodeId);
+
+        if (result?.status === "SUCCESS") {
+          completed.add(nodeId);
+          if (node.data.kind === "conditional" && result.output?.branch) {
+            branchDecisions.set(nodeId, result.output.branch);
+          }
+        } else {
+          failed.add(nodeId);
+        }
         remaining.delete(nodeId);
       })
     );
   }
 
-  const finalStatus = failed.size === 0 ? "SUCCESS" : completed.size > 0 ? "PARTIAL" : "FAILED";
+  const finalStatus =
+    failed.size === 0 && skipped.size === 0
+      ? "SUCCESS"
+      : completed.size > 0
+      ? "PARTIAL"
+      : "FAILED";
 
   await prisma.executionRun.update({
     where: { id: runId },
     data: { status: finalStatus, finishedAt: new Date() },
   });
-
-  try {
-    await axios.post(
-      `${process.env.BACKEND_URL}/api/v1/internal/notify`,
-      { runId, status: finalStatus },
-      { headers: { "X-Internal-Secret": process.env.INTERNAL_SERVICE_SECRET } }
-    );
-  } catch (err) {
-    console.error("Failed to notify backend of run completion:", err);
-  }
 
   return finalStatus;
 }
