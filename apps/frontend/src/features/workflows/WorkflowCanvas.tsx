@@ -1,5 +1,4 @@
-import { useCallback, useRef, useState } from "react";
-import { useEffect } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import ReactFlow, {
   Background,
   Controls,
@@ -17,6 +16,7 @@ import NodePalette from "./NodePalette";
 import CustomNode from "./CustomNode";
 import NodeConfigPanel from "./NodeConfigPanel";
 import RunHistoryPanel from "./RunHistoryPanel";
+import VersionsPanel from "./VersionsPanel";
 import { Button } from "../../components/Button";
 import { updateWorkflowGraph, runWorkflow } from "./workflowsApi";
 import type { Workflow } from "./workflowTypes";
@@ -28,34 +28,44 @@ interface Props {
 }
 
 function CanvasInner({ workflow }: Props) {
-  const [nodes, setNodes, onNodesChange] = useNodesState(workflow.graph.nodes as Node[]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(workflow.graph.edges as Edge[]);
+  const [nodes, setNodes, onNodesChange] = useNodesState(
+    workflow.graph.nodes as Node[],
+  );
+  const [edges, setEdges, onEdgesChange] = useEdgesState(
+    workflow.graph.edges as Edge[],
+  );
   const [saving, setSaving] = useState(false);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [showRuns, setShowRuns] = useState(false);
+  const [showVersions, setShowVersions] = useState(false);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const idCounter = useRef(0);
 
-  const onConnect = useCallback(
-  (connection: Connection) => {
-    const sourceNode = nodes.find((n) => n.id === connection.source);
-    const isConditional = sourceNode?.data?.kind === "conditional";
-    const edge = {
-      ...connection,
-      data: isConditional ? { branch: connection.sourceHandle === "false" ? "false" : "true" } : undefined,
-    };
-    setEdges((eds) => addEdge(edge, eds));
-  },
-  [setEdges, nodes]
-);
   useEffect(() => {
     function handleDeleteEvent(e: Event) {
       const nodeId = (e as CustomEvent).detail?.nodeId;
       if (nodeId) handleNodeDelete(nodeId);
     }
     window.addEventListener("atlas-delete-node", handleDeleteEvent);
-    return () => window.removeEventListener("atlas-delete-node", handleDeleteEvent);
+    return () =>
+      window.removeEventListener("atlas-delete-node", handleDeleteEvent);
   }, []);
+
+  const onConnect = useCallback(
+    (connection: Connection) => {
+      const sourceNode = nodes.find((n) => n.id === connection.source);
+      const isConditional = sourceNode?.data?.kind === "conditional";
+      const edge = {
+        ...connection,
+        data: isConditional
+          ? { branch: connection.sourceHandle === "false" ? "false" : "true" }
+          : undefined,
+      };
+      setEdges((eds) => addEdge(edge, eds));
+    },
+    [setEdges, nodes],
+  );
+
   function onDragOver(e: React.DragEvent) {
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
@@ -66,10 +76,8 @@ function CanvasInner({ workflow }: Props) {
     const raw = e.dataTransfer.getData("application/atlas-node");
     if (!raw) return;
     const { kind, label } = JSON.parse(raw);
-
     const bounds = reactFlowWrapper.current!.getBoundingClientRect();
     const position = { x: e.clientX - bounds.left, y: e.clientY - bounds.top };
-
     idCounter.current += 1;
     const newNode: Node = {
       id: `node-${Date.now()}-${idCounter.current}`,
@@ -83,58 +91,70 @@ function CanvasInner({ workflow }: Props) {
   function onNodeClick(_e: React.MouseEvent, node: Node) {
     setSelectedNode(node);
     setShowRuns(false);
+    setShowVersions(false);
   }
 
   function handleNodeConfigSave(nodeId: string, config: Record<string, any>) {
-  // console.log("[WorkflowCanvas] handleNodeConfigSave called:", nodeId, config);
-  setNodes((nds) => {
-    const updated = nds.map((n) => (n.id === nodeId ? { ...n, data: { ...n.data, config } } : n));
-    // console.log("[WorkflowCanvas] nodes after update:", updated.map(n => ({ id: n.id, config: n.data.config })));
-    return updated;
-  });
-}
+    setNodes((nds) =>
+      nds.map((n) =>
+        n.id === nodeId ? { ...n, data: { ...n.data, config } } : n,
+      ),
+    );
+  }
 
   function handleNodeDelete(nodeId: string) {
     setNodes((nds) => nds.filter((n) => n.id !== nodeId));
-    setEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId));
+    setEdges((eds) =>
+      eds.filter((e) => e.source !== nodeId && e.target !== nodeId),
+    );
   }
 
   async function handleSave() {
-  setSaving(true);
-  // console.log("[WorkflowCanvas] Saving graph, nodes:", nodes.map(n => ({ id: n.id, config: n.data.config })));
-  try {
-    await updateWorkflowGraph(workflow.id, {
-      nodes: nodes as any,
-      edges: edges as any,
-    });
-  } finally {
-    setSaving(false);
+    setSaving(true);
+    try {
+      await updateWorkflowGraph(workflow.id, {
+        nodes: nodes as any,
+        edges: edges as any,
+      });
+    } finally {
+      setSaving(false);
+    }
   }
-}
+
   async function handleRun() {
     await handleSave();
     await runWorkflow(workflow.id);
     setShowRuns(true);
+    setShowVersions(false);
+    setSelectedNode(null);
+  }
+
+  function toggleRuns() {
+    setShowRuns(!showRuns);
+    setShowVersions(false);
+    setSelectedNode(null);
+  }
+
+  function toggleVersions() {
+    setShowVersions(!showVersions);
+    setShowRuns(false);
     setSelectedNode(null);
   }
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-full min-h-0 overflow-hidden">
       <NodePalette />
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-h-0">
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <h2 className="text-sm font-semibold">{workflow.name}</h2>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
             <span className="text-xs text-muted">
               Webhook: {import.meta.env.VITE_API_URL}/webhooks/{workflow.webhookToken}
             </span>
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setShowRuns(!showRuns);
-                setSelectedNode(null);
-              }}
-            >
+            <Button variant="secondary" onClick={toggleVersions}>
+              {showVersions ? "Hide Versions" : "Versions"}
+            </Button>
+            <Button variant="secondary" onClick={toggleRuns}>
               {showRuns ? "Hide Runs" : "View Runs"}
             </Button>
             <Button variant="secondary" onClick={handleSave} disabled={saving}>
@@ -144,7 +164,7 @@ function CanvasInner({ workflow }: Props) {
           </div>
         </div>
         <div
-          className="flex-1"
+          className="flex-1 min-h-0 overflow-hidden"
           ref={reactFlowWrapper}
           onDragOver={onDragOver}
           onDrop={onDrop}
@@ -182,6 +202,12 @@ function CanvasInner({ workflow }: Props) {
       )}
       {showRuns && !selectedNode && (
         <RunHistoryPanel workflowId={workflow.id} />
+      )}
+      {showVersions && !selectedNode && (
+        <VersionsPanel
+          workflowId={workflow.id}
+          onRestored={() => window.location.reload()}
+        />
       )}
     </div>
   );

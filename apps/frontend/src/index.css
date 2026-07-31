@@ -4,6 +4,15 @@
 @tailwind components;
 @tailwind utilities;
 
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+* {
+  box-sizing: border-box;
+}
 body {
   @apply bg-bg text-text font-sans antialiased;
 }

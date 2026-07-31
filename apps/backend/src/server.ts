@@ -65,13 +65,13 @@ app.get("/api/v1/csrf-token", (req, res) => {
 // 6. CSRF protection - runs BEFORE every router, on every mutating request, except the auth entry points that can't have a token yet.
 app.use((req, res, next) => {
   const exempt =
-    req.method === "GET" ||
-    ["/api/v1/auth/login", "/api/v1/auth/register", "/api/v1/auth/refresh"].includes(req.path) ||
-    req.path.startsWith("/api/v1/auth/google") ||
-    req.path.startsWith("/api/v1/auth/github") ||
-    req.path.startsWith("/api/v1/webhooks") ||
-    req.path.startsWith("/api/v1/public") ||
-    req.path.startsWith("/api/v1/internal");
+  req.method === "GET" ||
+  ["/api/v1/auth/login", "/api/v1/auth/register", "/api/v1/auth/refresh", "/api/v1/auth/logout"].includes(req.path) ||
+  req.path.startsWith("/api/v1/auth/google") ||
+  req.path.startsWith("/api/v1/auth/github") ||
+  req.path.startsWith("/api/v1/internal") ||
+  req.path.startsWith("/api/v1/webhooks") ||
+  req.path.startsWith("/api/v1/public");
   if (exempt) return next();
   return doubleCsrfProtection(req, res, next);
 });

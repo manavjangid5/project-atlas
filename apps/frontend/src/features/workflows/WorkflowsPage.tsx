@@ -30,20 +30,17 @@ export default function WorkflowsPage() {
   }
 
   if (active) {
-    return (
-      <div className="h-screen flex flex-col">
-        <button
-          onClick={() => setActive(null)}
-          className="text-xs text-muted hover:text-text px-4 py-2 text-left border-b border-border"
-        >
-          ← Back to workflows
-        </button>
-        <div className="flex-1">
-          <WorkflowCanvas workflow={active} />
-        </div>
+  return (
+    <div className="h-full flex flex-col">
+      <button onClick={() => setActive(null)} className="text-xs text-muted hover:text-text px-4 py-2 text-left border-b border-border shrink-0">
+        ← Back to workflows
+      </button>
+      <div className="flex-1 min-h-0">
+        <WorkflowCanvas workflow={active} />
       </div>
-    );
-  }
+    </div>
+  );
+}
 
   return (
     <div className="p-8">

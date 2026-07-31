@@ -5,6 +5,7 @@ import type { Prisma } from "@prisma/client";
 import { logAudit } from "../infrastructure/audit/auditLogger";
 import { createNotification } from "./notificationService";
 import crypto from "crypto";
+import { isFlagEnabled } from "./featureFlagService";
 export async function listWorkflows(organizationId: string) {
   return prisma.workflow.findMany({
     where: { organizationId, deletedAt: null },
@@ -79,12 +80,15 @@ export async function softDeleteWorkflow(organizationId: string, id: string) {
 // UI has something to show right away), then publishes to Kafka for
 // the worker to actually process asynchronously. This separation is
 // what makes the engine non-blocking and horizontally scalable.
-export async function triggerWorkflowRun(
-  organizationId: string,
-  workflowId: string,
-  initialPayload?: unknown
-) {
+export async function triggerWorkflowRun(organizationId: string, workflowId: string, initialPayload?: unknown) {
   const workflow = await getWorkflow(organizationId, workflowId);
+
+  const graph = workflow.graph as any;
+  const hasAiNode = graph?.nodes?.some((n: any) => n.data?.kind === "ai_prompt");
+  if (hasAiNode) {
+    const aiEnabled = await isFlagEnabled("ai_node_enabled", organizationId);
+    if (!aiEnabled) throw new AppError(403, "AI node execution is disabled for this organization");
+  }
   const run = await prisma.executionRun.create({ data: { workflowId: workflow.id, status: "PENDING" } });
 
   await publishMessage({
@@ -127,4 +131,25 @@ export async function getRun(organizationId: string, workflowId: string, runId: 
   });
   if (!run) throw new AppError(404, "Run not found");
   return run;
+}
+
+export async function listVersions(organizationId: string, workflowId: string, page = 1, limit = 8) {
+  await getWorkflow(organizationId, workflowId);
+  const [versions, total] = await Promise.all([
+    prisma.workflowVersion.findMany({
+      where: { workflowId },
+      orderBy: { version: "desc" },
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.workflowVersion.count({ where: { workflowId } }),
+  ]);
+  return { versions, total, page, pages: Math.ceil(total / limit) };
+}
+
+export async function restoreVersion(organizationId: string, workflowId: string, versionId: string) {
+  const workflow = await getWorkflow(organizationId, workflowId);
+  const version = await prisma.workflowVersion.findFirst({ where: { id: versionId, workflowId } });
+  if (!version) throw new AppError(404, "Version not found");
+  return updateWorkflowGraph(organizationId, workflow.id, version.graph); // reuses existing snapshot logic, so restoring itself creates a new version too
 }

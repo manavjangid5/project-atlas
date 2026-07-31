@@ -9,7 +9,15 @@ export async function getChannel(): Promise<Channel> {
   if (channel) return channel;
   connection = await amqp.connect(process.env.RABBITMQ_URL!);
   channel = await connection.createChannel();
-  await channel.assertQueue(QUEUE_NAME, { durable: true });
+
+  await channel.assertExchange("workflow-executions-dlx", "fanout", { durable: true });
+  await channel.assertQueue("workflow-executions-dlq", { durable: true });
+  await channel.bindQueue("workflow-executions-dlq", "workflow-executions-dlx", "");
+
+  await channel.assertQueue(QUEUE_NAME, {
+    durable: true,
+    arguments: { "x-dead-letter-exchange": "workflow-executions-dlx" },
+  });
   return channel;
 }
 

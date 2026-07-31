@@ -38,7 +38,7 @@ function isInRolloutBucket(orgId: string, flagKey: string, percentage: number): 
 
 export async function isFlagEnabled(key: string, organizationId: string): Promise<boolean> {
   const flag = await prisma.featureFlag.findUnique({ where: { key } });
-  if (!flag) return false;
+  if (!flag) return true; // no flag defined yet = feature stays on, opt-out model
   if (flag.targetOrgIds.includes(organizationId)) return true;
   if (flag.isGloballyEnabled) return true;
   return isInRolloutBucket(organizationId, key, flag.rolloutPercentage);

@@ -57,4 +57,18 @@ router.get("/workflows/:id/runs/:runId", requireAuth, requireTenant, async (req:
   res.json(run);
 });
 
+router.get("/workflows/:id/versions", requireAuth, requireTenant, async (req: TenantRequest, res) => {
+  const page = parseInt(req.query.page as string) || 1;
+  const result = await workflowService.listVersions(req.tenant!.organizationId, paramStr(req.params.id), page, 8);
+  res.json(result);
+});
+router.post("/workflows/:id/versions/:versionId/restore", requireAuth, requireTenant, requireTenantRole("OWNER", "ADMIN", "DEVELOPER"), async (req: TenantRequest, res) => {
+  const wf = await workflowService.restoreVersion(
+    req.tenant!.organizationId,
+    paramStr(req.params.id),
+    paramStr(req.params.versionId)
+  );
+  res.json(wf);
+});
+
 export default router;
