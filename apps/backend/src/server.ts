@@ -29,6 +29,7 @@ import searchRouter from "./interfaces/http/routes/search";
 import notificationsRouter from "./interfaces/http/routes/notifications";
 import internalRouter from "./interfaces/http/routes/internal";
 import webhooksRouter from "./interfaces/http/routes/webhooks";
+import publicApiRouter from "./interfaces/http/routes/publicApi";
 const app = express();
 app.set("trust proxy", 1);
 
@@ -69,6 +70,7 @@ app.use((req, res, next) => {
     req.path.startsWith("/api/v1/auth/google") ||
     req.path.startsWith("/api/v1/auth/github") ||
     req.path.startsWith("/api/v1/webhooks") ||
+    req.path.startsWith("/api/v1/public") ||
     req.path.startsWith("/api/v1/internal");
   if (exempt) return next();
   return doubleCsrfProtection(req, res, next);
@@ -92,6 +94,7 @@ app.use("/api/v1", searchRouter);
 app.use("/api/v1", notificationsRouter);
 app.use("/api/v1", internalRouter);
 app.use("/api/v1", webhooksRouter);
+app.use("/api/v1", publicApiRouter);
 
 // 8. 404 for anything unmatched
 app.use((req, res) => res.status(404).json({ error: "Not found" }));

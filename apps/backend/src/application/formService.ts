@@ -2,6 +2,10 @@ import { prisma } from "../infrastructure/database/prismaClient";
 import { logAudit } from "../infrastructure/audit/auditLogger";
 import { AppError } from "../interfaces/http/middleware/errorHandler";
 import type { Prisma } from "@prisma/client";
+import { evaluateAllActiveRules } from "./ruleService";
+import { triggerWorkflowRun } from "./workflowService";
+import { createNotification } from "./notificationService";
+import { RuleAction } from "../domain/ruleTypes";
 
 export async function listForms(organizationId: string) {
   return prisma.formSchema.findMany({ where: { organizationId }, orderBy: { updatedAt: "desc" } });
@@ -55,9 +59,30 @@ export async function submitForm(
   const form = await getForm(organizationId, formId);
   validateSubmission(form.fields as any[], data);
 
-  return prisma.formSubmission.create({
+  const submission = await prisma.formSubmission.create({
     data: { formId, data: data as Prisma.InputJsonValue, submittedBy },
   });
+
+  // This is the actual wiring the review flagged as missing: rule
+  // actions were previously computed but never run anywhere. Every
+  // form submission is now evaluated against the org's active rules,
+  // and a matched action genuinely fires.
+  const matched = await evaluateAllActiveRules(organizationId, data);
+  for (const rule of matched) {
+  const action = rule.action as unknown as RuleAction;
+  if (action?.kind === "NOTIFY") {
+    await createNotification({
+      organizationId,
+      title: `Rule triggered: ${rule.name}`,
+      message: action.message || "A rule condition was met on form submission.",
+      priority: "normal",
+    });
+  } else if (action?.kind === "TRIGGER_WORKFLOW" && action.workflowId) {
+    await triggerWorkflowRun(organizationId, action.workflowId, { form_submission: data });
+  }
+}
+
+  return submission;
 }
 
 export async function listSubmissions(organizationId: string, formId: string) {

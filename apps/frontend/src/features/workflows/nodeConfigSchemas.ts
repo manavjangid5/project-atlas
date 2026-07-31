@@ -38,4 +38,14 @@ export const NODE_CONFIG_SCHEMAS: Record<NodeKind, ConfigField[]> = {
     { key: "url", label: "Target URL", type: "text" },
     { key: "method", label: "Method", type: "select", options: ["POST", "PUT"] },
   ],
+  github: [
+  { key: "owner", label: "Owner", type: "text" },
+  { key: "repo", label: "Repository", type: "text" },
+  {
+    key: "action",
+    label: "Action",
+    type: "select",
+    options: ["recent_commits", "latest_release"],
+  },
+]
 };

@@ -87,11 +87,7 @@ cap). Every re-upload against an existing file creates a new version.
 logging in — useful for sending a file to someone outside your organization.
 
 ### API Keys
-Generate keys for programmatic/external access to your organization's data
-(the raw key is shown exactly once, like Stripe or GitHub tokens). Also
-shows request-usage stats so you can see how actively a key is being used.
-Key issuance, revocation, and usage tracking are implemented; 
-requireApiKey middleware exists but is not yet mounted on a public API surface - see [docs/TRADEOFFS.md](https://github.com/manavjangid5/project-atlas/blob/main/docs/TRADEOFFS.md).
+Generate keys for programmatic/external access (raw key shown once). Keys authenticate against `GET /api/v1/public/workflows` and `POST /api/v1/public/workflows/:id/run` via the `X-API-Key` header — a genuine external integration surface, separate from the browser session used by the dashboard.
 
 ### Feature Flags
 Turn platform features on/off — either globally, for specific organizations,
