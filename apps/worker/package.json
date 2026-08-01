@@ -12,8 +12,7 @@
     "@prisma/client": "6.19.3",
     "amqplib": "^2.0.1",
     "axios": "^1.7.9",
-    "dotenv": "17.4.2",
-    "kafkajs": "^2.2.4"
+    "dotenv": "17.4.2"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",

@@ -105,7 +105,6 @@ jobs:
       - name: Lint
         run: npx eslint . --max-warnings 0
         working-directory: apps/frontend
-        continue-on-error: true
 
       - name: Build
         run: pnpm run build
