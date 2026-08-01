@@ -20,17 +20,18 @@ import VersionsPanel from "./VersionsPanel";
 import { Button } from "../../components/Button";
 import { updateWorkflowGraph, runWorkflow } from "./workflowsApi";
 import type { Workflow } from "./workflowTypes";
-
+import type { WorkflowNodeData } from "./workflowTypes";
 const nodeTypes = { custom: CustomNode };
 
 interface Props {
   workflow: Workflow;
 }
+interface BranchEdgeData {
+  branch?: "true" | "false";
+}
 
 function CanvasInner({ workflow }: Props) {
-  const [nodes, setNodes, onNodesChange] = useNodesState(
-    workflow.graph.nodes as Node[],
-  );
+  const [nodes, setNodes, onNodesChange] = useNodesState<WorkflowNodeData>(workflow.graph.nodes as Node<WorkflowNodeData>[]);
   const [edges, setEdges, onEdgesChange] = useEdgesState(
     workflow.graph.edges as Edge[],
   );
@@ -40,6 +41,20 @@ function CanvasInner({ workflow }: Props) {
   const [showVersions, setShowVersions] = useState(false);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const idCounter = useRef(0);
+  
+  const handleNodeDelete = useCallback((nodeId: string) => {
+    setNodes((nds) => nds.filter((n) => n.id !== nodeId));
+    setEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId));
+  }, [setNodes, setEdges]);
+
+  useEffect(() => {
+    function handleDeleteEvent(e: Event) {
+      const nodeId = (e as CustomEvent).detail?.nodeId;
+      if (nodeId) handleNodeDelete(nodeId);
+    }
+    window.addEventListener("atlas-delete-node", handleDeleteEvent);
+    return () => window.removeEventListener("atlas-delete-node", handleDeleteEvent);
+  }, [handleNodeDelete]);
 
   useEffect(() => {
     function handleDeleteEvent(e: Event) {
@@ -53,17 +68,27 @@ function CanvasInner({ workflow }: Props) {
 
   const onConnect = useCallback(
     (connection: Connection) => {
+      if (!connection.source || !connection.target) return;
+
       const sourceNode = nodes.find((n) => n.id === connection.source);
       const isConditional = sourceNode?.data?.kind === "conditional";
-      const edge = {
+
+      const edge: Edge<BranchEdgeData> = {
         ...connection,
+        id: `${connection.source}-${connection.target}`,
+        source: connection.source,
+        target: connection.target,
         data: isConditional
-          ? { branch: connection.sourceHandle === "false" ? "false" : "true" }
+          ? {
+              branch:
+                connection.sourceHandle === "false" ? "false" : "true",
+            }
           : undefined,
       };
+
       setEdges((eds) => addEdge(edge, eds));
     },
-    [setEdges, nodes],
+    [nodes, setEdges]
   );
 
   function onDragOver(e: React.DragEvent) {
@@ -94,20 +119,11 @@ function CanvasInner({ workflow }: Props) {
     setShowVersions(false);
   }
 
-  function handleNodeConfigSave(nodeId: string, config: Record<string, any>) {
-    setNodes((nds) =>
-      nds.map((n) =>
-        n.id === nodeId ? { ...n, data: { ...n.data, config } } : n,
-      ),
-    );
-  }
-
-  function handleNodeDelete(nodeId: string) {
-    setNodes((nds) => nds.filter((n) => n.id !== nodeId));
-    setEdges((eds) =>
-      eds.filter((e) => e.source !== nodeId && e.target !== nodeId),
-    );
-  }
+  function handleNodeConfigSave(nodeId: string, config: Record<string, unknown>) {
+  setNodes((nds) =>
+    nds.map((n) => (n.id === nodeId ? { ...n, data: { ...n.data, config } } : n))
+  );
+}
 
   async function handleSave() {
     setSaving(true);

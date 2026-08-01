@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { api } from "../../lib/api";
 
 interface RunLog {
@@ -27,16 +27,16 @@ export default function RunHistoryPanel({ workflowId }: { workflowId: string }) 
   const [runs, setRuns] = useState<Run[]>([]);
   const [expandedRun, setExpandedRun] = useState<string | null>(null);
 
-  async function refresh() {
+  const refresh = useCallback(async () => {
     const res = await api.get(`/workflows/${workflowId}/runs`);
     setRuns(res.data);
-  }
+  }, [workflowId]);
 
   useEffect(() => {
     refresh();
-    const interval = setInterval(refresh, 3000); // poll every 3s for live updates
+    const interval = setInterval(refresh, 3000);
     return () => clearInterval(interval);
-  }, [workflowId]);
+  }, [refresh]);
 
   return (
     <div className="w-80 border-l border-border bg-surface flex flex-col">

@@ -10,7 +10,7 @@ export type NodeKind =
 export interface WorkflowNodeData {
   label: string;
   kind: NodeKind;
-  config: Record<string, any>;
+  config: Record<string, unknown>;
 }
 
 export interface WorkflowGraph {

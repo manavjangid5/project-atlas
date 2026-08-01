@@ -6,7 +6,7 @@ export interface FormField {
   type: FieldType;
   required?: boolean;
   options?: string[];              // for select
-  showIf?: { fieldId: string; equals: any }; // conditional visibility
+  showIf?: { fieldId: string; equals: string | number | boolean }; // conditional visibility
   repeatable?: boolean;             // repeating groups
   fields?: FormField[];             // nested fields for "group" type
 }

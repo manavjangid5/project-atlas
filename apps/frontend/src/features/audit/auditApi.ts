@@ -3,7 +3,7 @@ import { api } from "../../lib/api";
 export interface AuditLogEntry {
   id: string;
   action: string;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
   createdAt: string;
   user?: { email: string; name?: string } | null;
 }

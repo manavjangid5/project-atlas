@@ -6,7 +6,7 @@ export interface FormField {
   type: FieldType;
   required?: boolean;
   options?: string[];
-  showIf?: { fieldId: string; equals: any };
+  showIf?: { fieldId: string; equals: string | number | boolean };
 }
 
 export interface FormSchemaModel {

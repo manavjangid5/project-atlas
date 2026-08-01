@@ -8,6 +8,7 @@ import {
 import type { Member } from "./membersApi";
 import { useAuthStore } from "../../store/authStore";
 import { Button } from "../../components/Button";
+import { AxiosError } from "axios";
 
 const ROLES = ["ADMIN", "DEVELOPER", "VIEWER"];
 
@@ -39,9 +40,10 @@ export default function MembersPage() {
         `${window.location.origin}/invitations/${invite.token}/accept`,
       );
       setInviteEmail("");
-    } catch (err: any) {
+    } catch (err) {
+      const message = err instanceof AxiosError ? err.response?.data?.error : undefined;
       alert(
-        err?.response?.data?.error ||
+        message ||
           "Could not create invite. Check your role and try again.",
       );
     }

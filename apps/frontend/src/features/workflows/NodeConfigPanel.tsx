@@ -6,12 +6,12 @@ import { Button } from "../../components/Button";
 interface Props {
   node: Node | null;
   onClose: () => void;
-  onSave: (nodeId: string, config: Record<string, any>) => void;
+  onSave: (nodeId: string, config: Record<string, unknown>) => void;
   onDelete: (nodeId: string) => void;
 }
 
 export default function NodeConfigPanel({ node, onClose, onSave, onDelete }: Props) {
-  const [config, setConfig] = useState<Record<string, any>>({});
+  const [config, setConfig] = useState<Record<string, unknown>>({});
 
   useEffect(() => {
     if (node) setConfig(node.data?.config || {});
@@ -51,7 +51,7 @@ export default function NodeConfigPanel({ node, onClose, onSave, onDelete }: Pro
             <label className="text-xs text-muted block mb-1">{field.label}</label>
             {field.type === "select" ? (
               <select
-                value={config[field.key] || ""}
+                value={config[field.key] == null ? "" : String(config[field.key])}
                 onChange={(e) => handleChange(field.key, e.target.value)}
                 className="w-full bg-bg border border-border rounded-sm px-2 py-1.5 text-sm"
               >
@@ -62,7 +62,7 @@ export default function NodeConfigPanel({ node, onClose, onSave, onDelete }: Pro
               </select>
             ) : field.type === "textarea" ? (
               <textarea
-                value={config[field.key] || ""}
+                value={config[field.key] == null ? "" : String(config[field.key])}
                 onChange={(e) => handleChange(field.key, e.target.value)}
                 placeholder={field.placeholder}
                 rows={4}
@@ -71,7 +71,7 @@ export default function NodeConfigPanel({ node, onClose, onSave, onDelete }: Pro
             ) : (
               <input
                 type={field.type === "number" ? "number" : "text"}
-                value={config[field.key] || ""}
+                value={config[field.key] == null ? "" : String(config[field.key])}
                 onChange={(e) => handleChange(field.key, e.target.value)}
                 placeholder={field.placeholder}
                 className="w-full bg-bg border border-border rounded-sm px-2 py-1.5 text-sm"

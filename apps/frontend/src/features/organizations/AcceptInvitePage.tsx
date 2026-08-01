@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { api } from "../../lib/api";
 import { Button } from "../../components/Button";
+import { AxiosError } from "axios";
 
 export default function AcceptInvitePage() {
   const { token } = useParams();
@@ -9,29 +10,22 @@ export default function AcceptInvitePage() {
   const [status, setStatus] = useState<"checking" | "needsAuth" | "accepting" | "success" | "error">("checking");
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    // First confirm the user is actually logged in — if not, send them
-    // to register/login, then bounce back here afterward using the
-    // token still in the URL.
-    api
-      .get("/auth/me")
-      .then(() => acceptInvite())
-      .catch(() => setStatus("needsAuth"));
-  }, [token]);
-
-  async function acceptInvite() {
-    setStatus("accepting");
-    try {
-      await api.post(`/invitations/${token}/accept`);
-      setStatus("success");
-      setTimeout(() => {
-        window.location.href = "/dashboard"; // full reload so orgs list refetches with the new membership
-      }, 1500);
-    } catch (err: any) {
-      setError(err?.response?.data?.error || "This invite link is invalid or has expired.");
-      setStatus("error");
-    }
+  const acceptInvite = useCallback(async () => {
+  setStatus("accepting");
+  try {
+    await api.post(`/invitations/${token}/accept`);
+    setStatus("success");
+    setTimeout(() => { window.location.href = "/dashboard"; }, 1500);
+  } catch (err) {
+    const message = err instanceof AxiosError ? err.response?.data?.error : undefined;
+    setError(message || "This invite link is invalid or has expired.");
+    setStatus("error");
   }
+}, [token]);
+
+useEffect(() => {
+  api.get("/auth/me").then(() => acceptInvite()).catch(() => setStatus("needsAuth"));
+}, [token, acceptInvite]);
 
   return (
     <div className="min-h-screen gradient-mesh flex items-center justify-center px-4">

@@ -3,6 +3,7 @@ import { listFiles, uploadFile, getDownloadUrl, deleteFile, createShareLink } fr
 import type { FileAsset } from "./filesApi";
 import { Button } from "../../components/Button";
 import { useAuthStore } from "../../store/authStore";
+import { AxiosError } from "axios";
 
 
 const FILE_ICONS: Record<string, string> = {
@@ -42,8 +43,9 @@ useEffect(refresh, [activeOrgId]);
         await uploadFile(file);
       }
       refresh();
-    } catch (err: any) {
-      alert(err?.response?.data?.error || "Upload failed");
+    } catch (err) {
+      const message = err instanceof AxiosError ? err.response?.data?.error : undefined;
+      alert(message || "Upload failed");
     } finally {
       setUploading(false);
     }

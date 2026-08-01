@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { api } from "../../lib/api";
 import { useAuthStore } from "../../store/authStore";
 import { Button } from "../../components/Button";
+import { AxiosError } from "axios";
 
 export default function RegisterPage() {
   const [name, setName] = useState("");
@@ -21,8 +22,10 @@ export default function RegisterPage() {
       await api.post("/auth/register", { email, password, name });
       setAuthenticated(true);
       navigate("/dashboard");
-    } catch (err: any) {
-      setError(err?.response?.data?.error || "Registration failed. Please try again.");
+    } catch (err) {
+        const message =
+        err instanceof AxiosError ? err.response?.data?.error : undefined;
+        setError(message || "Registration failed. Please try again.");
     } finally {
       setLoading(false);
     }

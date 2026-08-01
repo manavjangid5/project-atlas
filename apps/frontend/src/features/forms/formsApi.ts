@@ -16,7 +16,7 @@ export async function updateFormFields(id: string, fields: FormField[]): Promise
   return res.data;
 }
 
-export async function submitForm(id: string, data: Record<string, any>) {
+export async function submitForm(id: string, data: Record<string, unknown>) {
   const res = await api.post(`/forms/${id}/submit`, { data });
   return res.data;
 }

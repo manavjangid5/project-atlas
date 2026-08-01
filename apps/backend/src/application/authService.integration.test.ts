@@ -1,4 +1,5 @@
-import { PrismaClient } from "@prisma/client";
+// import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "@atlas/database";
 import * as authService from "./authService";
 
 const prisma = new PrismaClient();

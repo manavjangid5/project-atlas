@@ -4,18 +4,18 @@ import { Button } from "../../components/Button";
 
 interface Props {
   fields: FormField[];
-  onSubmit?: (data: Record<string, any>) => void;
+  onSubmit?: (data: Record<string, unknown>) => void;
 }
 
 export default function FormPreview({ fields, onSubmit }: Props) {
-  const [values, setValues] = useState<Record<string, any>>({});
+  const [values, setValues] = useState<Record<string, unknown>>({});
 
   function isVisible(field: FormField) {
     if (!field.showIf) return true;
     return String(values[field.showIf.fieldId]) === String(field.showIf.equals);
   }
 
-  function handleChange(id: string, value: any) {
+  function handleChange(id: string, value: unknown) {
     setValues((prev) => ({ ...prev, [id]: value }));
   }
 
@@ -29,7 +29,7 @@ export default function FormPreview({ fields, onSubmit }: Props) {
           </label>
           {field.type === "select" ? (
             <select
-              value={values[field.id] || ""}
+              value={String(values[field.id] || "")}
               onChange={(e) => handleChange(field.id, e.target.value)}
               className="w-full bg-bg border border-border rounded-sm px-3 py-2 text-sm"
             >
@@ -47,7 +47,7 @@ export default function FormPreview({ fields, onSubmit }: Props) {
           ) : (
             <input
               type={field.type}
-              value={values[field.id] || ""}
+              value={String(values[field.id] || "")}
               onChange={(e) => handleChange(field.id, e.target.value)}
               className="w-full bg-bg border border-border rounded-sm px-3 py-2 text-sm"
             />

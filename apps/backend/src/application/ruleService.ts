@@ -2,7 +2,7 @@ import { prisma } from "../infrastructure/database/prismaClient";
 import { logAudit } from "../infrastructure/audit/auditLogger";
 import { evaluateConditions } from "./ruleEvaluator";
 import { AppError } from "../interfaces/http/middleware/errorHandler";
-import type { Prisma } from "@prisma/client";
+import type { Prisma } from "@atlas/database";
 
 export async function listRules(organizationId: string) {
   return prisma.rule.findMany({ where: { organizationId }, orderBy: { updatedAt: "desc" } });

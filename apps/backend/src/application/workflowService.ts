@@ -1,7 +1,7 @@
 import { prisma } from "../infrastructure/database/prismaClient";
 import { publishMessage } from "../infrastructure/rabbitmq/rabbitmqClient";
 import { AppError } from "../interfaces/http/middleware/errorHandler";
-import type { Prisma } from "@prisma/client";
+import type { Prisma } from "@atlas/database";
 import { logAudit } from "../infrastructure/audit/auditLogger";
 import { createNotification } from "./notificationService";
 import crypto from "crypto";

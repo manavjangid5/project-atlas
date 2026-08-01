@@ -1,7 +1,7 @@
 import request from "supertest";
 import express from "express";
 import cookieParser from "cookie-parser";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "@atlas/database";
 import { signAccessToken } from "../../../infrastructure/auth/tokens";
 import { requireAuth } from "./auth";
 import { requireTenant, TenantRequest } from "./tenant";

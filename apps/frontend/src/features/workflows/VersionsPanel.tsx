@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { api } from "../../lib/api";
 import { Button } from "../../components/Button";
+import type { WorkflowGraph } from "./workflowTypes";
+import { AxiosError } from "axios";
 
-interface Version { id: string; version: number; createdAt: string; graph: any; }
+interface Version { id: string; version: number; createdAt: string; graph: WorkflowGraph; }
 
 export default function VersionsPanel({ workflowId, onRestored }: { workflowId: string; onRestored: () => void }) {
   const [versions, setVersions] = useState<Version[]>([]);
@@ -22,8 +24,9 @@ export default function VersionsPanel({ workflowId, onRestored }: { workflowId: 
     try {
       await api.post(`/workflows/${workflowId}/versions/${versionId}/restore`);
       onRestored();
-    } catch (err: any) {
-      setError(err?.response?.data?.error || "Restore failed.");
+    } catch (err) {
+    const message = err instanceof AxiosError ? err.response?.data?.error : undefined;
+    setError(message || "Restore failed.");
     }
   }
 

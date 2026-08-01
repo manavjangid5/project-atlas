@@ -4,7 +4,11 @@ import { Button } from "../../components/Button";
 
 export default function RuleTestPanel({ ruleId }: { ruleId: string }) {
   const [jsonInput, setJsonInput] = useState('{\n  "location": "India",\n  "experience": 7\n}');
-  const [result, setResult] = useState<any>(null);
+  interface RuleEvalResult {
+    matched: boolean;
+    action: { kind: string; message?: string; workflowId?: string } | null;
+  }
+  const [result, setResult] = useState<RuleEvalResult | null>(null);
   const [error, setError] = useState("");
 
   async function handleTest() {

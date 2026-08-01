@@ -23,6 +23,7 @@ export default function RequireAuth() {
         setAuthenticated(false);
         setStatus("unauthed");
       });
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- setAuthenticated is a stable Zustand action
   }, []);
 
   if (status === "checking") {

@@ -3,6 +3,7 @@ import { createOrganization } from "./organizationsApi";
 import type { Organization } from "./organizationsApi";
 import { useAuthStore } from "../../store/authStore";
 import { Button } from "../../components/Button";
+import { AxiosError } from "axios";
 
 interface Props {
   onCreated: (org: Organization) => void;
@@ -24,8 +25,9 @@ export default function OnboardingScreen({ onCreated }: Props) {
       const orgWithRole = { ...org, role: "OWNER" } as Organization;
       onCreated(orgWithRole);
       setActiveOrg(org.id); // explicit — don't rely on stale-state auto-correction alone
-    } catch (err: any) {
-      setError(err?.response?.data?.error || "Could not create organization. Please try again.");
+    } catch (err) {
+      const message = err instanceof AxiosError ? err.response?.data?.error : undefined;
+      setError(message || "Could not create organization. Please try again.");
     } finally {
       setLoading(false);
     }

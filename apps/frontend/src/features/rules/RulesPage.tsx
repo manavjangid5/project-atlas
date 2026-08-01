@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { listRules, createRule, updateRule } from "./rulesApi";
-import type { RuleModel } from "./ruleTypes";
+import type { ConditionGroup, RuleModel } from "./ruleTypes";
 import { newGroup } from "./ruleTypes";
 import ConditionNodeEditor from "./ConditionNodeEditor";
 import RuleActionEditor from "./RuleActionEditor";
@@ -57,7 +57,7 @@ useEffect(() => {
         <div className="mb-6">
           <ConditionNodeEditor
             node={active.conditions}
-            onChange={(updated) => setActive({ ...active, conditions: updated as any })}
+            onChange={(updated) => setActive({ ...active, conditions: updated as ConditionGroup })}
             onDelete={() => {}}
             depth={0}
           />

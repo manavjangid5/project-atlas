@@ -39,9 +39,8 @@ export default function DashboardLayout() {
   const [newOrgName, setNewOrgName] = useState("");
 
   useEffect(() => {
-    fetchOrganizations()
-      .then(setOrganizations)
-      .finally(() => setLoading(false));
+    fetchOrganizations().then(setOrganizations).finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- setOrganizations is a stable Zustand action
   }, []);
 
   async function handleLogout() {

@@ -23,7 +23,7 @@ export async function deleteRule(id: string) {
   await api.delete(`/rules/${id}`);
 }
 
-export async function evaluateRule(id: string, data: Record<string, any>) {
+export async function evaluateRule(id: string, data: Record<string, unknown>) {
   const res = await api.post(`/rules/${id}/evaluate`, { data });
   return res.data;
 }
