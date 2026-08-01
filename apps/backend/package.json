@@ -8,7 +8,6 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "test": "jest",
-    "postinstall": "prisma generate",
     "seed": "prisma db seed"
   },
   "prisma": {
@@ -21,7 +20,6 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1088.0",
     "@aws-sdk/s3-request-presigner": "^3.1088.0",
-    "@prisma/client": "^6.19.3",
     "amqplib": "^2.0.1",
     "axios": "^1.18.1",
     "bcrypt": "^6.0.0",
@@ -40,7 +38,8 @@
     "passport-google-oauth20": "^2.0.0",
     "socket.io": "^4.8.3",
     "swagger-ui-express": "^5.0.1",
-    "zod": "^4.4.3"
+    "zod": "^4.4.3",
+    "@atlas/database": "workspace:*"
   },
   "devDependencies": {
     "@types/amqplib": "^0.10.8",
@@ -59,7 +58,6 @@
     "@types/supertest": "^7.2.1",
     "@types/swagger-ui-express": "^4.1.8",
     "jest": "^30.4.2",
-    "prisma": "^6.19.3",
     "supertest": "^7.2.2",
     "ts-jest": "^29.4.11",
     "ts-node": "^10.9.2",
