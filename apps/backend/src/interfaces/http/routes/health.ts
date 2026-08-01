@@ -9,7 +9,8 @@ router.get("/health", async (_req, res) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
     checks.db = "connected";
-  } catch {
+  } catch(err) {
+    console.error("Health check DB error:", err);
     checks.db = "disconnected";
   }
   try {
