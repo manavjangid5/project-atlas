@@ -3,6 +3,8 @@ import { requireAuth, AuthedRequest } from "../middleware/auth";
 import { requireTenant, requireTenantRole, TenantRequest } from "../middleware/tenant";
 import * as orgService from "../../../application/organizationService";
 import { prisma } from "../../../infrastructure/database/prismaClient";
+import { validateBody } from "../middleware/validate";
+import { createOrgSchema, inviteMemberSchema } from "../../../domain/validationSchemas";
 
 const router = Router();
 
@@ -10,7 +12,7 @@ function paramStr(value: string | string[] | undefined): string {
   return Array.isArray(value) ? value[0] : (value as string);
 }
 
-router.post("/organizations", requireAuth, async (req: AuthedRequest, res) => {
+router.post("/organizations", requireAuth, validateBody(createOrgSchema), async (req, res) => {
   const { name } = req.body;
   const org = await orgService.createOrganization(req.user!.id, name);
   res.status(201).json(org);
@@ -40,12 +42,7 @@ router.patch(
     res.json(updated);
   }
 );
-router.post(
-  "/organizations/:orgId/invitations",
-  requireAuth,
-  requireTenant,
-  requireTenantRole("OWNER", "ADMIN"),
-  async (req: TenantRequest, res) => {
+router.post("/organizations/:orgId/invitations", requireAuth, requireTenant, requireTenantRole("OWNER", "ADMIN"), validateBody(inviteMemberSchema), async (req, res) => {
     const { email, role } = req.body;
     const invite = await orgService.inviteMember(
       req.tenant!.organizationId,

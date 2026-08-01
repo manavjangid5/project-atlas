@@ -10,8 +10,10 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 // provider-agnostic — swapping Gemini for another provider later
 // only touches this file, not the graph executor or node schema.
 function resolveTemplate(template: string, ctx: ExecutionContext): string {
-  return template.replace(/\{(\w+)\}/g, (_, key) => {
-    return ctx.variables[key] !== undefined ? String(ctx.variables[key]) : `{${key}}`;
+  return template.replace(/\{([\w-]+)\}/g, (_, key) => {
+    const value = ctx.variables[key];
+    if (value === undefined) return `{${key}}`;
+    return typeof value === "object" ? JSON.stringify(value) : String(value);
   });
 }
 

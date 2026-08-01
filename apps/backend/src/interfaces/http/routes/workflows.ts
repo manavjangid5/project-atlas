@@ -2,6 +2,8 @@ import { Router } from "express";
 import { requireAuth } from "../middleware/auth";
 import { requireTenant, TenantRequest, requireTenantRole } from "../middleware/tenant";
 import * as workflowService from "../../../application/workflowService";
+import { validateBody } from "../middleware/validate";
+import { createWorkflowSchema, updateWorkflowGraphSchema } from "../../../domain/validationSchemas";
 
 const router = Router();
 
@@ -19,12 +21,12 @@ router.get("/workflows/:id", requireAuth, requireTenant, async (req: TenantReque
   res.json(wf);
 });
 
-router.post("/workflows", requireAuth, requireTenant, requireTenantRole("OWNER", "ADMIN", "DEVELOPER"), async (req: TenantRequest, res) => {
+router.post("/workflows", requireAuth, requireTenant, requireTenantRole("OWNER", "ADMIN", "DEVELOPER"), validateBody(createWorkflowSchema), async (req, res) => {
   const wf = await workflowService.createWorkflow(req.tenant!.organizationId, req.body.name);
   res.status(201).json(wf);
 });
 
-router.patch("/workflows/:id", requireAuth, requireTenant, requireTenantRole("OWNER", "ADMIN", "DEVELOPER"), async (req: TenantRequest, res) => {
+router.patch("/workflows/:id", requireAuth, requireTenant, requireTenantRole("OWNER", "ADMIN", "DEVELOPER"), validateBody(updateWorkflowGraphSchema), async (req, res) => {
   const wf = await workflowService.updateWorkflowGraph(
     req.tenant!.organizationId,
     paramStr(req.params.id),

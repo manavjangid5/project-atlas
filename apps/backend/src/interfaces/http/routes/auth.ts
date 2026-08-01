@@ -3,6 +3,8 @@ import rateLimit from "express-rate-limit";
 import passport from "../../../infrastructure/auth/passport";
 import * as authService from "../../../application/authService";
 import { requireAuth } from "../middleware/auth";
+import { validateBody } from "../middleware/validate";
+import { registerSchema, loginSchema } from "../../../domain/validationSchemas";
 const router = Router();
 
 const authLimiter = rateLimit({
@@ -27,14 +29,14 @@ router.get("/me", requireAuth, async (req, res) => {
   res.json({ id: req.user!.id, email: req.user!.email });
 });
 
-router.post("/register", authLimiter, async (req, res) => {
+router.post("/register", authLimiter, validateBody(registerSchema), async (req, res) => {
   const { email, password, name } = req.body;
   const { accessToken, refreshToken } = await authService.register(email, password, name);
   setAuthCookies(res, accessToken, refreshToken);
   res.status(201).json({ status: "ok" });
 });
 
-router.post("/login", authLimiter, async (req, res) => {
+router.post("/login", authLimiter, validateBody(loginSchema), async (req, res) => {
   const { email, password } = req.body;
   const { accessToken, refreshToken } = await authService.login(email, password);
   setAuthCookies(res, accessToken, refreshToken);
