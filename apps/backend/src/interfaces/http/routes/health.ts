@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { prisma } from "../../../infrastructure/database/prismaClient";
+import { prisma } from "@atlas/database";
 import { getChannel } from "../../../infrastructure/rabbitmq/rabbitmqClient";
 
 const router = Router();
@@ -9,7 +9,7 @@ router.get("/health", async (_req, res) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
     checks.db = "connected";
-  } catch(err) {
+  } catch (err) {
     console.error("Health check DB error:", err);
     checks.db = "disconnected";
   }
