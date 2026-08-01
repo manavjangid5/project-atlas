@@ -1,0 +1,116 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Project Atlas API",
+    "version": "1.0.0",
+    "description": "AI-powered collaborative workflow automation platform — multi-tenant REST API."
+  },
+  "servers": [
+    { "url": "http://localhost:4000/api/v1", "description": "Local dev" },
+    { "url": "https://project-atlas-vupz.onrender.com/api/v1", "description": "Production" }
+  ],
+  "components": {
+    "securitySchemes": {
+      "cookieAuth": { "type": "apiKey", "in": "cookie", "name": "accessToken" },
+      "apiKeyAuth": { "type": "apiKey", "in": "header", "name": "X-API-Key" }
+    },
+    "parameters": {
+      "OrgHeader": {
+        "name": "X-Organization-Id",
+        "in": "header",
+        "required": true,
+        "schema": { "type": "string" }
+      }
+    }
+  },
+  "security": [{ "cookieAuth": [] }],
+  "paths": {
+    "/auth/register": {
+      "post": {
+        "summary": "Register a new account",
+        "security": [],
+        "requestBody": {
+          "content": { "application/json": { "schema": { "type": "object", "properties": { "email": { "type": "string" }, "password": { "type": "string" }, "name": { "type": "string" } }, "required": ["email", "password"] } } }
+        },
+        "responses": { "201": { "description": "Account created, cookies set" }, "400": { "description": "Validation failed" }, "409": { "description": "Email already registered" } }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "summary": "Login with email/password",
+        "security": [],
+        "requestBody": { "content": { "application/json": { "schema": { "type": "object", "properties": { "email": { "type": "string" }, "password": { "type": "string" } } } } } },
+        "responses": { "200": { "description": "Logged in, cookies set" }, "401": { "description": "Invalid credentials" } }
+      }
+    },
+    "/auth/refresh": { "post": { "summary": "Rotate access+refresh tokens", "security": [], "responses": { "200": { "description": "New tokens issued" }, "401": { "description": "Invalid/expired/reused refresh token" } } } },
+    "/auth/logout": { "post": { "summary": "Revoke current session", "responses": { "200": { "description": "Logged out" } } } },
+    "/auth/me": { "get": { "summary": "Get current user", "responses": { "200": { "description": "User id/email" }, "401": { "description": "Not authenticated" } } } },
+    "/auth/google": { "get": { "summary": "Start Google OAuth flow", "security": [], "responses": { "302": { "description": "Redirect to Google" } } } },
+    "/auth/github": { "get": { "summary": "Start GitHub OAuth flow", "security": [], "responses": { "302": { "description": "Redirect to GitHub" } } } },
+
+    "/organizations": {
+      "get": { "summary": "List orgs the user belongs to", "responses": { "200": { "description": "Array of orgs with role" } } },
+      "post": { "summary": "Create organization (creator becomes OWNER)", "requestBody": { "content": { "application/json": { "schema": { "type": "object", "properties": { "name": { "type": "string" } } } } } }, "responses": { "201": { "description": "Created" } } }
+    },
+    "/organizations/members": { "get": { "summary": "List members of active org", "parameters": [{ "$ref": "#/components/parameters/OrgHeader" }], "responses": { "200": { "description": "Array of members" } } } },
+    "/organizations/{orgId}": { "patch": { "summary": "Rename organization (OWNER only)", "parameters": [{ "$ref": "#/components/parameters/OrgHeader" }], "responses": { "200": { "description": "Updated" }, "403": { "description": "Not OWNER" } } } },
+    "/organizations/{orgId}/invitations": { "post": { "summary": "Invite a member (OWNER/ADMIN)", "parameters": [{ "$ref": "#/components/parameters/OrgHeader" }], "responses": { "201": { "description": "Invite token created" } } } },
+    "/invitations/{token}/accept": { "post": { "summary": "Accept an invitation", "responses": { "200": { "description": "Membership created" }, "410": { "description": "Expired/used" } } } },
+
+    "/workflows": {
+      "get": { "summary": "List workflows", "parameters": [{ "$ref": "#/components/parameters/OrgHeader" }], "responses": { "200": { "description": "Array of workflows" } } },
+      "post": { "summary": "Create workflow", "parameters": [{ "$ref": "#/components/parameters/OrgHeader" }], "responses": { "201": { "description": "Created" } } }
+    },
+    "/workflows/{id}": {
+      "get": { "summary": "Get workflow", "parameters": [{ "$ref": "#/components/parameters/OrgHeader" }], "responses": { "200": { "description": "Workflow" } } },
+      "patch": { "summary": "Save graph (nodes+edges); also snapshots a WorkflowVersion", "parameters": [{ "$ref": "#/components/parameters/OrgHeader" }], "responses": { "200": { "description": "Updated" }, "400": { "description": "Invalid graph shape" } } },
+      "delete": { "summary": "Soft-delete workflow", "parameters": [{ "$ref": "#/components/parameters/OrgHeader" }], "responses": { "204": { "description": "Deleted" } } }
+    },
+    "/workflows/{id}/run": { "post": { "summary": "Trigger async execution", "parameters": [{ "$ref": "#/components/parameters/OrgHeader" }], "responses": { "202": { "description": "Accepted, returns runId" }, "403": { "description": "AI node disabled by feature flag" } } } },
+    "/workflows/{id}/runs": { "get": { "summary": "List execution runs with logs", "parameters": [{ "$ref": "#/components/parameters/OrgHeader" }], "responses": { "200": { "description": "Array of runs" } } } },
+    "/workflows/{id}/versions": { "get": { "summary": "List saved versions (paginated)", "parameters": [{ "$ref": "#/components/parameters/OrgHeader" }], "responses": { "200": { "description": "Paginated versions" } } } },
+    "/workflows/{id}/versions/{versionId}/restore": { "post": { "summary": "Restore a prior version", "parameters": [{ "$ref": "#/components/parameters/OrgHeader" }], "responses": { "200": { "description": "Restored (creates a new version)" } } } },
+
+    "/webhooks/{token}": { "post": { "summary": "Public inbound trigger — starts a workflow run using its secret webhook token", "security": [], "responses": { "202": { "description": "Accepted" }, "404": { "description": "Unknown/inactive token" } } } },
+    "/public/workflows": { "get": { "summary": "List workflows via API key", "security": [{ "apiKeyAuth": [] }], "responses": { "200": { "description": "Array" } } } },
+    "/public/workflows/{id}/run": { "post": { "summary": "Trigger a run via API key", "security": [{ "apiKeyAuth": [] }], "responses": { "202": { "description": "Accepted" } } } },
+
+    "/forms": {
+      "get": { "summary": "List forms", "parameters": [{ "$ref": "#/components/parameters/OrgHeader" }], "responses": { "200": { "description": "Array" } } },
+      "post": { "summary": "Create form", "parameters": [{ "$ref": "#/components/parameters/OrgHeader" }], "responses": { "201": { "description": "Created" } } }
+    },
+    "/forms/{id}/submit": { "post": { "summary": "Submit form data — evaluates active rules, may fire NOTIFY/TRIGGER_WORKFLOW", "parameters": [{ "$ref": "#/components/parameters/OrgHeader" }], "responses": { "201": { "description": "Submission created" }, "400": { "description": "Validation failed against field defs" } } } },
+
+    "/rules": {
+      "get": { "summary": "List rules", "parameters": [{ "$ref": "#/components/parameters/OrgHeader" }], "responses": { "200": { "description": "Array" } } },
+      "post": { "summary": "Create rule", "parameters": [{ "$ref": "#/components/parameters/OrgHeader" }], "responses": { "201": { "description": "Created" } } }
+    },
+    "/rules/{id}/evaluate": { "post": { "summary": "Test a rule's nested AND/OR conditions against sample JSON", "parameters": [{ "$ref": "#/components/parameters/OrgHeader" }], "responses": { "200": { "description": "matched: boolean, action" } } } },
+
+    "/files": {
+      "get": { "summary": "List files", "parameters": [{ "$ref": "#/components/parameters/OrgHeader" }], "responses": { "200": { "description": "Array" } } },
+      "post": { "summary": "Upload file (multipart, field 'file', 20MB cap)", "parameters": [{ "$ref": "#/components/parameters/OrgHeader" }], "requestBody": { "content": { "multipart/form-data": { "schema": { "type": "object", "properties": { "file": { "type": "string", "format": "binary" } } } } } }, "responses": { "201": { "description": "Uploaded" } } }
+    },
+    "/files/{id}/share": { "post": { "summary": "Create expiring public share link", "parameters": [{ "$ref": "#/components/parameters/OrgHeader" }], "responses": { "201": { "description": "token + expiresAt" } } } },
+    "/share/{token}": { "get": { "summary": "Public — resolve a share link to a signed download URL", "security": [], "responses": { "200": { "description": "url + fileName" }, "410": { "description": "Expired" } } } },
+
+    "/api-keys": {
+      "get": { "summary": "List API keys (OWNER/ADMIN)", "parameters": [{ "$ref": "#/components/parameters/OrgHeader" }], "responses": { "200": { "description": "Array, prefix only" } } },
+      "post": { "summary": "Create key — raw value shown once", "parameters": [{ "$ref": "#/components/parameters/OrgHeader" }], "responses": { "201": { "description": "rawKey + keyPrefix" } } }
+    },
+
+    "/feature-flags": {
+      "get": { "summary": "List feature flags (platform-level)", "responses": { "200": { "description": "Array" } } },
+      "post": { "summary": "Create flag (OWNER only)", "responses": { "201": { "description": "Created" } } }
+    },
+    "/feature-flags/evaluate": { "get": { "summary": "Resolved true/false map for active org", "parameters": [{ "$ref": "#/components/parameters/OrgHeader" }], "responses": { "200": { "description": "{key: boolean}" } } } },
+
+    "/search": { "get": { "summary": "Cross-module search", "parameters": [{ "$ref": "#/components/parameters/OrgHeader" }, { "name": "q", "in": "query", "schema": { "type": "string" } }], "responses": { "200": { "description": "Array of results with type" } } } },
+    "/notifications": { "get": { "summary": "List recent notifications", "parameters": [{ "$ref": "#/components/parameters/OrgHeader" }], "responses": { "200": { "description": "Array" } } } },
+    "/audit-logs": { "get": { "summary": "Paginated audit trail (OWNER/ADMIN)", "parameters": [{ "$ref": "#/components/parameters/OrgHeader" }], "responses": { "200": { "description": "Paginated logs" } } } },
+    "/analytics/overview": { "get": { "summary": "Run counts, success rate, avg duration", "parameters": [{ "$ref": "#/components/parameters/OrgHeader" }], "responses": { "200": { "description": "Stats object" } } } },
+
+    "/health": { "get": { "summary": "DB + queue connectivity check", "security": [], "responses": { "200": { "description": "Healthy" }, "503": { "description": "Degraded" } } } }
+  }
+}
