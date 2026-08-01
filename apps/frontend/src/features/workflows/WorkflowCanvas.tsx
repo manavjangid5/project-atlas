@@ -19,7 +19,7 @@ import RunHistoryPanel from "./RunHistoryPanel";
 import VersionsPanel from "./VersionsPanel";
 import { Button } from "../../components/Button";
 import { updateWorkflowGraph, runWorkflow } from "./workflowsApi";
-import type { Workflow } from "./workflowTypes";
+import type { Workflow, WorkflowGraph } from "./workflowTypes";
 import type { WorkflowNodeData } from "./workflowTypes";
 const nodeTypes = { custom: CustomNode };
 
@@ -55,16 +55,6 @@ function CanvasInner({ workflow }: Props) {
     window.addEventListener("atlas-delete-node", handleDeleteEvent);
     return () => window.removeEventListener("atlas-delete-node", handleDeleteEvent);
   }, [handleNodeDelete]);
-
-  useEffect(() => {
-    function handleDeleteEvent(e: Event) {
-      const nodeId = (e as CustomEvent).detail?.nodeId;
-      if (nodeId) handleNodeDelete(nodeId);
-    }
-    window.addEventListener("atlas-delete-node", handleDeleteEvent);
-    return () =>
-      window.removeEventListener("atlas-delete-node", handleDeleteEvent);
-  }, []);
 
   const onConnect = useCallback(
     (connection: Connection) => {
@@ -120,17 +110,17 @@ function CanvasInner({ workflow }: Props) {
   }
 
   function handleNodeConfigSave(nodeId: string, config: Record<string, unknown>) {
-  setNodes((nds) =>
-    nds.map((n) => (n.id === nodeId ? { ...n, data: { ...n.data, config } } : n))
-  );
-}
+    setNodes((nds) =>
+      nds.map((n) => (n.id === nodeId ? { ...n, data: { ...n.data, config } } : n))
+    );
+  }
 
   async function handleSave() {
     setSaving(true);
     try {
       await updateWorkflowGraph(workflow.id, {
-        nodes: nodes as any,
-        edges: edges as any,
+        nodes: nodes as unknown as WorkflowGraph["nodes"],
+        edges: edges as unknown as WorkflowGraph["edges"],
       });
     } finally {
       setSaving(false);
