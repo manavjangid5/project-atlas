@@ -39,13 +39,29 @@ export const NODE_CONFIG_SCHEMAS: Record<NodeKind, ConfigField[]> = {
     { key: "method", label: "Method", type: "select", options: ["POST", "PUT"] },
   ],
   github: [
-  { key: "owner", label: "Owner", type: "text" },
-  { key: "repo", label: "Repository", type: "text" },
-  {
-    key: "action",
-    label: "Action",
-    type: "select",
-    options: ["recent_commits", "latest_release"],
-  },
-]
+    { key: "owner", label: "Owner", type: "text" },
+    { key: "repo", label: "Repository", type: "text" },
+    {
+      key: "action",
+      label: "Action",
+      type: "select",
+      options: ["recent_commits", "latest_release"],
+    },
+  ],
+  email: [
+    { key: "to", label: "To", type: "text" },
+    { key: "subject", label: "Subject", type: "text" },
+    { key: "body", label: "Body", type: "textarea" },
+  ],
+  switch: [
+    { key: "field", label: "Field to switch on", type: "text" },
+  ],
+  loop: [
+    { key: "arrayVariable", label: "Array variable name", type: "text" },
+    { key: "maxIterations", label: "Max iterations", type: "number" },
+  ],
+  database_query: [
+    { key: "table", label: "Table (workflows/forms/files)", type: "text" },
+    { key: "limit", label: "Limit", type: "number" },
+  ],
 };

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { requireAuth } from "../middleware/auth";
-import { requireTenant, TenantRequest, requireTenantRole} from "../middleware/tenant";
+import { requireTenant, TenantRequest, requireTenantRole, requirePermission} from "../middleware/tenant";
 import * as flagService from "../../../application/featureFlagService";
 
 const router = Router();
@@ -13,17 +13,17 @@ router.get("/feature-flags", requireAuth, async (_req, res) => {
   res.json(await flagService.listFlags());
 });
 
-router.post("/feature-flags", requireAuth, requireTenant, requireTenantRole("OWNER"), async (req, res) => {
+router.post("/feature-flags", requireAuth, requireTenant, requirePermission("flag", "create"), async (req, res) => {
   const flag = await flagService.createFlag(req.body.key, req.body.description);
   res.status(201).json(flag);
 });
 
-router.patch("/feature-flags/:id", requireAuth, requireTenant, requireTenantRole("OWNER"), async (req, res) => {
+router.patch("/feature-flags/:id", requireAuth, requireTenant, requirePermission("flag", "update"), async (req, res) => {
   const flag = await flagService.updateFlag(paramStr(req.params.id), req.body);
   res.json(flag);
 });
 
-router.delete("/feature-flags/:id", requireAuth, requireTenant, requireTenantRole("OWNER"), async (req, res) => {
+router.delete("/feature-flags/:id", requireAuth, requireTenant, requirePermission("flag", "delete"), async (req, res) => {
   await flagService.deleteFlag(paramStr(req.params.id));
   res.status(204).send();
 });

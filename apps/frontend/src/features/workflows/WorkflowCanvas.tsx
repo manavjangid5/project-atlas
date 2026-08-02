@@ -21,8 +21,9 @@ import { Button } from "../../components/Button";
 import { updateWorkflowGraph, runWorkflow } from "./workflowsApi";
 import type { Workflow, WorkflowGraph } from "./workflowTypes";
 import type { WorkflowNodeData } from "./workflowTypes";
-const nodeTypes = { custom: CustomNode };
+import { validateGraph } from "./graphValidation";
 
+const nodeTypes = { custom: CustomNode };
 interface Props {
   workflow: Workflow;
 }
@@ -128,6 +129,11 @@ function CanvasInner({ workflow }: Props) {
   }
 
   async function handleRun() {
+    const validation = validateGraph(nodes, edges);
+    if (!validation.valid) {
+      alert("Cannot run this workflow:\n\n" + validation.errors.join("\n"));
+      return;
+    }
     await handleSave();
     await runWorkflow(workflow.id);
     setShowRuns(true);

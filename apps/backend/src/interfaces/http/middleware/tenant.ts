@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { prisma } from "../../../infrastructure/database/prismaClient";
 import { AppError } from "./errorHandler";
+import { can } from "../../../application/permissionService";
 
 export type TenantRequest = Request;
 
@@ -31,6 +32,17 @@ export function requireTenantRole(...roles: string[]) {
   return (req: Request, res: Response, next: NextFunction) => {
     if (!req.tenant?.role || !roles.includes(req.tenant.role)) {
       throw new AppError(403, "Insufficient permissions for this action");
+    }
+    next();
+  };
+}
+
+export function requirePermission(resource: string, action: string) {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    const tenantReq = req as TenantRequest;
+    const allowed = await can(tenantReq.tenant!.organizationId, tenantReq.tenant!.role, resource, action);
+    if (!allowed) {
+      return res.status(403).json({ error: `Not permitted to ${action} ${resource}` });
     }
     next();
   };

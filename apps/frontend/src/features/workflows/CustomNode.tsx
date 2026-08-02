@@ -8,7 +8,8 @@ const KIND_ICONS: Record<string, string> = {
   slack: "💬",
   ai_prompt: "✨",
   webhook: "🔗",
-  github: "🐙"
+  github: "🐙",
+  email: "✉️", switch: "🔀", loop: "🔁", database_query: "🗄️",
 };
 
 interface Props {

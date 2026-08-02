@@ -71,7 +71,8 @@ export async function executeAiPrompt(config: any, ctx: ExecutionContext): Promi
 
 function fallbackResponse(prompt: string, reason: string, meta?: any): NodeResult {
   return {
-    status: "SUCCESS",
+    status: "FAILED", // was SUCCESS — a degraded AI response is a failure, not a success
+    error: `AI unavailable: ${reason}`,
     output: {
       text: `[AI unavailable — fallback] Could not generate a response for: "${prompt.slice(0, 80)}..."`,
       fallback: true,

@@ -265,3 +265,14 @@ model FeatureFlag {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 }
+
+model Permission {
+  id             String       @id @default(cuid())
+  organizationId String
+  role           Role
+  resource       String   // "workflow" | "form" | "rule" | "file" | "flag"
+  action         String   // "create" | "update" | "delete" | "run"
+  allowed        Boolean  @default(true)
+
+  @@unique([organizationId, role, resource, action])
+}

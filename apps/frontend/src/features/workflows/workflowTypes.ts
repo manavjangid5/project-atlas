@@ -5,7 +5,11 @@ export type NodeKind =
   | "slack"
   | "ai_prompt"
   | "webhook"
-  | "github";
+  | "github"
+  | "email"
+  | "switch"
+  | "loop"
+  | "database_query";
 
 export interface WorkflowNodeData {
   label: string;

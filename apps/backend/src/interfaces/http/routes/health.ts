@@ -5,14 +5,11 @@ import { getChannel } from "../../../infrastructure/rabbitmq/rabbitmqClient";
 const router = Router();
 
 router.get("/health", async (_req, res) => {
-  console.log("Inside /health handler — typeof prisma:", typeof prisma, "prisma truthy:", !!prisma);
   const checks = { db: "unknown", queue: "unknown" };
   try {
-    console.log("About to call prisma.$queryRaw, prisma keys:", prisma ? Object.keys(prisma).slice(0, 5) : "N/A");
     await prisma.$queryRaw`SELECT 1`;
     checks.db = "connected";
   } catch (err) {
-    console.error("Health check DB error:", err);
     checks.db = "disconnected";
   }
   try {

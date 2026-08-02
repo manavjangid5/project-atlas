@@ -1,16 +1,13 @@
 import { Request, Response, NextFunction } from "express";
+import { DomainError } from "../../../domain/errors";
+export class AppError extends DomainError {}
 
-export class AppError extends Error {
-  constructor(public statusCode: number, message: string) {
-    super(message);
-  }
-}
 
 export function errorHandler(err: any, req: Request, res: Response, next: NextFunction) {
   if (err?.code === "EBADCSRFTOKEN" || err?.message?.toLowerCase().includes("csrf")) {
     return res.status(403).json({ error: "Invalid CSRF token" });
   }
-  if (err instanceof AppError) {
+  if (err instanceof DomainError) {
     return res.status(err.statusCode).json({ error: err.message });
   }
   console.error(err);
