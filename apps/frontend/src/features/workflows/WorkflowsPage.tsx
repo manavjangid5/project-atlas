@@ -4,6 +4,7 @@ import type { Workflow } from "./workflowTypes";
 import WorkflowCanvas from "./WorkflowCanvas";
 import { Button } from "../../components/Button";
 import { useAuthStore } from "../../store/authStore";
+import GenerateWorkflowModal from "./GenerateWorkflowModal";
 
 export default function WorkflowsPage() {
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
@@ -11,6 +12,7 @@ export default function WorkflowsPage() {
   const [loading, setLoading] = useState(true);
   const [newName, setNewName] = useState("");
   const activeOrgId = useAuthStore((s) => s.activeOrgId);
+  const [showGenerate, setShowGenerate] = useState(false);
 
   useEffect(() => {
   setLoading(true);
@@ -54,6 +56,18 @@ export default function WorkflowsPage() {
           className="flex-1 bg-surface border border-border rounded-sm px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-accent"
         />
         <Button onClick={handleCreate}>Create</Button>
+        <Button variant="secondary" onClick={() => setShowGenerate(true)}>✨ Generate with AI</Button>
+
+        {showGenerate && (
+          <GenerateWorkflowModal
+            onClose={() => setShowGenerate(false)}
+            onGenerated={(wf) => {
+              setWorkflows((prev) => [...prev, wf]);
+              setActive(wf);
+              setShowGenerate(false);
+            }}
+          />
+        )}
       </div>
 
       {loading ? (

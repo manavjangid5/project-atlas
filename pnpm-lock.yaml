@@ -19,6 +19,9 @@ importers:
       '@aws-sdk/s3-request-presigner':
         specifier: ^3.1088.0
         version: 3.1101.0
+      '@google/generative-ai':
+        specifier: ^0.24.1
+        version: 0.24.1
       amqplib:
         specifier: ^2.0.1
         version: 2.0.1

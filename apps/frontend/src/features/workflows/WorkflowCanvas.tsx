@@ -22,6 +22,7 @@ import { updateWorkflowGraph, runWorkflow } from "./workflowsApi";
 import type { Workflow, WorkflowGraph } from "./workflowTypes";
 import type { WorkflowNodeData } from "./workflowTypes";
 import { validateGraph } from "./graphValidation";
+import { api } from "../../lib/api";
 
 const nodeTypes = { custom: CustomNode };
 interface Props {
@@ -44,6 +45,10 @@ function CanvasInner({ workflow }: Props) {
   const [showVersions, setShowVersions] = useState(false);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const idCounter = useRef(0);
+  const [suggestions, setSuggestions] = useState<
+    { kind: string; label: string; reason: string }[]
+  >([]);
+  const [suggestLoading, setSuggestLoading] = useState(false);
 
   const handleNodeDelete = useCallback(
     (nodeId: string) => {
@@ -103,6 +108,28 @@ function CanvasInner({ workflow }: Props) {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleSave, handleRun]);
+
+  async function handleSuggestNext() {
+    setSuggestLoading(true);
+    try {
+      const res = await api.post(`/workflows/${workflow.id}/suggest-next`, {});
+      setSuggestions(res.data);
+    } finally {
+      setSuggestLoading(false);
+    }
+  }
+
+  function addSuggestedNode(suggestion: { kind: string; label: string }) {
+    idCounter.current += 1;
+    const newNode: Node = {
+      id: `node-${Date.now()}-${idCounter.current}`,
+      type: "custom",
+      position: { x: 100 + nodes.length * 250, y: 300 },
+      data: { label: suggestion.label, kind: suggestion.kind, config: {} },
+    };
+    setNodes((nds) => nds.concat(newNode));
+    setSuggestions([]);
+  }
 
   const onConnect = useCallback(
     (connection: Connection) => {
@@ -190,6 +217,9 @@ function CanvasInner({ workflow }: Props) {
               Webhook: {import.meta.env.VITE_API_URL}/webhooks/
               {workflow.webhookToken}
             </span>
+            <Button variant="secondary" onClick={handleSuggestNext} disabled={suggestLoading}>
+              {suggestLoading ? "Thinking…" : "💡 Suggest next"}
+            </Button>
             <Button variant="secondary" onClick={toggleVersions}>
               {showVersions ? "Hide Versions" : "Versions"}
             </Button>
@@ -202,6 +232,27 @@ function CanvasInner({ workflow }: Props) {
             <Button onClick={handleRun}>Run</Button>
           </div>
         </div>
+        {suggestions.length > 0 && (
+          <div className="flex items-center gap-2 px-4 py-2 border-b border-border bg-surface/50 flex-wrap">
+            <span className="text-xs text-muted">Suggested next:</span>
+            {suggestions.map((s, i) => (
+              <button
+                key={i}
+                onClick={() => addSuggestedNode(s)}
+                title={s.reason}
+                className="text-xs bg-bg border border-border rounded-pill px-3 py-1 hover:border-accent transition-colors"
+              >
+                {s.label}
+              </button>
+            ))}
+            <button
+              onClick={() => setSuggestions([])}
+              className="text-xs text-muted hover:text-danger ml-auto"
+            >
+              ✕
+            </button>
+          </div>
+        )}
         <div
           className="flex-1 min-h-0 overflow-hidden"
           ref={reactFlowWrapper}

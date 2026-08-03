@@ -33,6 +33,7 @@ import publicApiRouter from "./interfaces/http/routes/publicApi";
 import swaggerUi from "swagger-ui-express";
 import openapiSpec from "./openapi.json";
 import { loadScheduledWorkflows } from "./infrastructure/scheduler/cronScheduler";
+import aiWorkflowRouter from "./interfaces/http/routes/aiWorkflow";
 
 const app = express();
 app.set("trust proxy", 1);
@@ -100,6 +101,7 @@ app.use("/api/v1", internalRouter);
 app.use("/api/v1", webhooksRouter);
 app.use("/api/v1", publicApiRouter);
 app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(openapiSpec));
+app.use("/api/v1", aiWorkflowRouter);
 
 // 8. 404 for anything unmatched
 app.use((req, res) => res.status(404).json({ error: "Not found" }));

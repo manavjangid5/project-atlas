@@ -21,6 +21,7 @@
     "@atlas/database": "workspace:*",
     "@aws-sdk/client-s3": "^3.1088.0",
     "@aws-sdk/s3-request-presigner": "^3.1088.0",
+    "@google/generative-ai": "^0.24.1",
     "amqplib": "^2.0.1",
     "axios": "^1.18.1",
     "bcrypt": "^6.0.0",
