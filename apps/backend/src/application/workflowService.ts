@@ -6,6 +6,8 @@ import { logAudit } from "../infrastructure/audit/auditLogger";
 import { createNotification } from "./notificationService";
 import crypto from "crypto";
 import { isFlagEnabled } from "./featureFlagService";
+import cron from "node-cron";
+
 export async function listWorkflows(organizationId: string) {
   return prisma.workflow.findMany({
     where: { organizationId, deletedAt: null },
@@ -32,9 +34,6 @@ export async function createWorkflow(organizationId: string, name: string) {
   });
 }
 
-// Every graph save also writes a version snapshot — satisfies the
-// Version Control module (4.14) without extra UI work: diff/rollback
-// can be built later purely by reading this table.
 export async function updateWorkflowGraph(
   organizationId: string,
   id: string,
@@ -76,11 +75,10 @@ export async function softDeleteWorkflow(organizationId: string, id: string) {
   });
 }
 
-// Triggers execution: creates a PENDING run record immediately (so the
-// UI has something to show right away), then publishes to Kafka for
-// the worker to actually process asynchronously. This separation is
-// what makes the engine non-blocking and horizontally scalable.
-export async function triggerWorkflowRun(organizationId: string, workflowId: string, initialPayload?: unknown) {
+export async function triggerWorkflowRun(organizationId: string,
+  workflowId: string,
+  initialPayload?: unknown,
+  priority: number = 5) {
   const workflow = await getWorkflow(organizationId, workflowId);
 
   const graph = workflow.graph as any;
@@ -91,13 +89,10 @@ export async function triggerWorkflowRun(organizationId: string, workflowId: str
   }
   const run = await prisma.executionRun.create({ data: { workflowId: workflow.id, status: "PENDING" } });
 
-  await publishMessage({
-    runId: run.id,
-    workflowId: workflow.id,
-    organizationId,
-    graph: workflow.graph,
-    initialPayload: initialPayload ?? null,
-  });
+  await publishMessage(
+    { runId: run.id, workflowId: workflow.id, organizationId, graph: workflow.graph, initialPayload: initialPayload ?? null },
+    priority
+  );
 
   await logAudit({ action: "WORKFLOW_EXECUTED", organizationId, metadata: { workflowId: workflow.id, runId: run.id } });
   await createNotification({
@@ -152,4 +147,12 @@ export async function restoreVersion(organizationId: string, workflowId: string,
   const version = await prisma.workflowVersion.findFirst({ where: { id: versionId, workflowId } });
   if (!version) throw new AppError(404, "Version not found");
   return updateWorkflowGraph(organizationId, workflow.id, version.graph); // reuses existing snapshot logic, so restoring itself creates a new version too
+}
+
+export async function updateWorkflowSchedule(organizationId: string, id: string, cronSchedule: string | null) {
+  const workflow = await getWorkflow(organizationId, id);
+  if (cronSchedule && !cron.validate(cronSchedule)) {
+    throw new AppError(400, "Invalid cron expression");
+  }
+  return prisma.workflow.update({ where: { id: workflow.id }, data: { cronSchedule } });
 }

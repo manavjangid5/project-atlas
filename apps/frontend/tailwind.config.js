@@ -4,12 +4,12 @@ export default {
   theme: {
     extend: {
       colors: {
-        bg: "#0A0A0B",
-        surface: "#161616",
-        surfaceHover: "#1F1F1F",
-        border: "#2A2A2A",
-        text: "#F5F5F5",
-        muted: "#9E9E9E",
+        bg: "var(--color-bg)",
+        surface: "var(--color-surface)",
+        surfaceHover: "var(--color-surfaceHover)",
+        border: "var(--color-border)",
+        text: "var(--color-text)",
+        muted: "var(--color-muted)",
         accent: "#E8622C",
         accentHover: "#D6541F",
         danger: "#FF5C5C",

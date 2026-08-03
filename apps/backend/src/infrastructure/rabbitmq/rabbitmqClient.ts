@@ -16,12 +16,15 @@ export async function getChannel(): Promise<Channel> {
 
   await channel.assertQueue(QUEUE_NAME, {
     durable: true,
-    arguments: { "x-dead-letter-exchange": "workflow-executions-dlx" },
+    arguments: {
+      "x-dead-letter-exchange": "workflow-executions-dlx",
+      "x-max-priority": 10,
+    },
   });
   return channel;
 }
 
-export async function publishMessage(message: object) {
+export async function publishMessage(message: object, priority: number = 5) {
   const ch = await getChannel();
   ch.sendToQueue(QUEUE_NAME, Buffer.from(JSON.stringify(message)), { persistent: true });
 }

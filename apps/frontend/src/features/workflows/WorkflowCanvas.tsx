@@ -57,6 +57,21 @@ function CanvasInner({ workflow }: Props) {
     return () => window.removeEventListener("atlas-delete-node", handleDeleteEvent);
   }, [handleNodeDelete]);
 
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if ((e.ctrlKey || e.metaKey) && e.key === "s") {
+        e.preventDefault();
+        handleSave();
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+        e.preventDefault();
+        handleRun();
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [nodes, edges]);
+
   const onConnect = useCallback(
     (connection: Connection) => {
       if (!connection.source || !connection.target) return;

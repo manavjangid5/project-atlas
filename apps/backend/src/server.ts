@@ -32,6 +32,8 @@ import webhooksRouter from "./interfaces/http/routes/webhooks";
 import publicApiRouter from "./interfaces/http/routes/publicApi";
 import swaggerUi from "swagger-ui-express";
 import openapiSpec from "./openapi.json";
+import { loadScheduledWorkflows } from "./infrastructure/scheduler/cronScheduler";
+
 const app = express();
 app.set("trust proxy", 1);
 
@@ -109,3 +111,4 @@ const PORT = process.env.PORT || 4000;
 const server = app.listen(PORT, () => console.log(`Backend running on port ${PORT}`));
 initSocketServer(server);
 startKeepAlive();
+loadScheduledWorkflows();

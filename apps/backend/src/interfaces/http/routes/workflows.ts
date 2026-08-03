@@ -4,6 +4,7 @@ import { requireTenant, TenantRequest, requireTenantRole, requirePermission } fr
 import * as workflowService from "../../../application/workflowService";
 import { validateBody } from "../middleware/validate";
 import { createWorkflowSchema, updateWorkflowGraphSchema } from "../../../domain/validationSchemas";
+import { loadScheduledWorkflows } from "../../../infrastructure/scheduler/cronScheduler";
 
 const router = Router();
 
@@ -70,6 +71,11 @@ router.post("/workflows/:id/versions/:versionId/restore", requireAuth, requireTe
     paramStr(req.params.id),
     paramStr(req.params.versionId)
   );
+  res.json(wf);
+});
+router.patch("/workflows/:id/schedule", requireAuth, requireTenant, requirePermission("workflow", "update"), async (req, res) => {
+  const wf = await workflowService.updateWorkflowSchedule(req.tenant!.organizationId, paramStr(req.params.id), req.body.cronSchedule);
+  await loadScheduledWorkflows(); // re-sync in-memory cron jobs
   res.json(wf);
 });
 

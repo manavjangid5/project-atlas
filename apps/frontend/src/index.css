@@ -4,17 +4,35 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --color-bg: #0A0A0B;
+  --color-surface: #161616;
+  --color-surfaceHover: #1F1F1F;
+  --color-border: #2A2A2A;
+  --color-text: #F5F5F5;
+  --color-muted: #9E9E9E;
+}
+
+:root.light {
+  --color-bg: #FAFAF9;
+  --color-surface: #FFFFFF;
+  --color-surfaceHover: #F0F0EE;
+  --color-border: #E2E2DE;
+  --color-text: #17171A;
+  --color-muted: #6B6B65;
+}
+
 html, body, #root {
   height: 100%;
   margin: 0;
-  overflow: hidden;
 }
 
 * {
   box-sizing: border-box;
 }
+
 body {
-  @apply bg-bg text-text font-sans antialiased;
+  @apply bg-bg text-text font-sans antialiased transition-colors duration-150;
 }
 
 ::selection {
@@ -24,5 +42,5 @@ body {
 .gradient-mesh {
   background: radial-gradient(circle at 15% 20%, rgba(180, 120, 140, 0.35), transparent 45%),
               radial-gradient(circle at 85% 30%, rgba(70, 160, 170, 0.3), transparent 50%),
-              #0A0A0B;
+              var(--color-bg);
 }

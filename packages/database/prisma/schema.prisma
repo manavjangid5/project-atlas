@@ -82,6 +82,7 @@ model Workflow {
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
   webhookToken String? @unique
+  cronSchedule String?
 
   @@index([organizationId])
 }

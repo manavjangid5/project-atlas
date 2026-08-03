@@ -12,7 +12,10 @@ export async function connectConsumer(): Promise<Channel> {
 
   await channel.assertQueue(QUEUE_NAME, {
     durable: true,
-    arguments: { "x-dead-letter-exchange": "workflow-executions-dlx" },
+    arguments: {
+      "x-dead-letter-exchange": "workflow-executions-dlx",
+      "x-max-priority": 10,
+    },
   });
   channel.prefetch(1);
   return channel;

@@ -8,6 +8,7 @@ import NotificationBell from "../features/notifications/NotificationBell";
 import GlobalSearchBar from "../features/search/GlobalSearchBar";
 import OnboardingScreen from "../features/organizations/OnboardingScreen";
 import { createOrganization } from "../features/organizations/organizationsApi";
+import { useThemeStore } from "../store/themeStore";
 
 const NAV_ITEMS = [
   { label: "Workflows", path: "/dashboard/workflows" },
@@ -37,6 +38,7 @@ export default function DashboardLayout() {
 
   const [showCreateOrg, setShowCreateOrg] = useState(false);
   const [newOrgName, setNewOrgName] = useState("");
+  const { theme, toggleTheme } = useThemeStore();
 
   useEffect(() => {
     fetchOrganizations().then(setOrganizations).finally(() => setLoading(false));
@@ -158,6 +160,13 @@ export default function DashboardLayout() {
         <div className="flex items-center justify-between px-6 py-3 border-b border-border shrink-0">
           <GlobalSearchBar />
           <div className="flex items-center gap-4">
+            <button
+              onClick={toggleTheme}
+              className="text-sm text-muted hover:text-text"
+              title="Toggle theme"
+            >
+              {theme === "dark" ? "☀️" : "🌙"}
+            </button>
             <NotificationBell />
             <button
               onClick={handleLogout}
