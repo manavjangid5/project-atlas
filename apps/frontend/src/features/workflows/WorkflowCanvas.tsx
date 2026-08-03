@@ -32,7 +32,9 @@ interface BranchEdgeData {
 }
 
 function CanvasInner({ workflow }: Props) {
-  const [nodes, setNodes, onNodesChange] = useNodesState<WorkflowNodeData>(workflow.graph.nodes as Node<WorkflowNodeData>[]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<WorkflowNodeData>(
+    workflow.graph.nodes as Node<WorkflowNodeData>[],
+  );
   const [edges, setEdges, onEdgesChange] = useEdgesState(
     workflow.graph.edges as Edge[],
   );
@@ -42,11 +44,16 @@ function CanvasInner({ workflow }: Props) {
   const [showVersions, setShowVersions] = useState(false);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const idCounter = useRef(0);
-  
-  const handleNodeDelete = useCallback((nodeId: string) => {
-    setNodes((nds) => nds.filter((n) => n.id !== nodeId));
-    setEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId));
-  }, [setNodes, setEdges]);
+
+  const handleNodeDelete = useCallback(
+    (nodeId: string) => {
+      setNodes((nds) => nds.filter((n) => n.id !== nodeId));
+      setEdges((eds) =>
+        eds.filter((e) => e.source !== nodeId && e.target !== nodeId),
+      );
+    },
+    [setNodes, setEdges],
+  );
 
   useEffect(() => {
     function handleDeleteEvent(e: Event) {
@@ -54,9 +61,34 @@ function CanvasInner({ workflow }: Props) {
       if (nodeId) handleNodeDelete(nodeId);
     }
     window.addEventListener("atlas-delete-node", handleDeleteEvent);
-    return () => window.removeEventListener("atlas-delete-node", handleDeleteEvent);
+    return () =>
+      window.removeEventListener("atlas-delete-node", handleDeleteEvent);
   }, [handleNodeDelete]);
 
+  const handleSave = useCallback(async () => {
+    setSaving(true);
+    try {
+      await updateWorkflowGraph(workflow.id, {
+        nodes: nodes as unknown as WorkflowGraph["nodes"],
+        edges: edges as unknown as WorkflowGraph["edges"],
+      });
+    } finally {
+      setSaving(false);
+    }
+  }, [nodes, edges, workflow.id]);
+
+  const handleRun = useCallback(async () => {
+    const validation = validateGraph(nodes, edges);
+    if (!validation.valid) {
+      alert("Cannot run this workflow:\n\n" + validation.errors.join("\n"));
+      return;
+    }
+    await handleSave();
+    await runWorkflow(workflow.id);
+    setShowRuns(true);
+    setShowVersions(false);
+    setSelectedNode(null);
+  }, [nodes, edges, handleSave, workflow.id]);
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if ((e.ctrlKey || e.metaKey) && e.key === "s") {
@@ -70,7 +102,7 @@ function CanvasInner({ workflow }: Props) {
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [nodes, edges]);
+  }, [handleSave, handleRun]);
 
   const onConnect = useCallback(
     (connection: Connection) => {
@@ -86,15 +118,14 @@ function CanvasInner({ workflow }: Props) {
         target: connection.target,
         data: isConditional
           ? {
-              branch:
-                connection.sourceHandle === "false" ? "false" : "true",
+              branch: connection.sourceHandle === "false" ? "false" : "true",
             }
           : undefined,
       };
 
       setEdges((eds) => addEdge(edge, eds));
     },
-    [nodes, setEdges]
+    [nodes, setEdges],
   );
 
   function onDragOver(e: React.DragEvent) {
@@ -125,35 +156,15 @@ function CanvasInner({ workflow }: Props) {
     setShowVersions(false);
   }
 
-  function handleNodeConfigSave(nodeId: string, config: Record<string, unknown>) {
+  function handleNodeConfigSave(
+    nodeId: string,
+    config: Record<string, unknown>,
+  ) {
     setNodes((nds) =>
-      nds.map((n) => (n.id === nodeId ? { ...n, data: { ...n.data, config } } : n))
+      nds.map((n) =>
+        n.id === nodeId ? { ...n, data: { ...n.data, config } } : n,
+      ),
     );
-  }
-
-  async function handleSave() {
-    setSaving(true);
-    try {
-      await updateWorkflowGraph(workflow.id, {
-        nodes: nodes as unknown as WorkflowGraph["nodes"],
-        edges: edges as unknown as WorkflowGraph["edges"],
-      });
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function handleRun() {
-    const validation = validateGraph(nodes, edges);
-    if (!validation.valid) {
-      alert("Cannot run this workflow:\n\n" + validation.errors.join("\n"));
-      return;
-    }
-    await handleSave();
-    await runWorkflow(workflow.id);
-    setShowRuns(true);
-    setShowVersions(false);
-    setSelectedNode(null);
   }
 
   function toggleRuns() {
@@ -176,7 +187,8 @@ function CanvasInner({ workflow }: Props) {
           <h2 className="text-sm font-semibold">{workflow.name}</h2>
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted">
-              Webhook: {import.meta.env.VITE_API_URL}/webhooks/{workflow.webhookToken}
+              Webhook: {import.meta.env.VITE_API_URL}/webhooks/
+              {workflow.webhookToken}
             </span>
             <Button variant="secondary" onClick={toggleVersions}>
               {showVersions ? "Hide Versions" : "Versions"}

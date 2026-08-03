@@ -39,6 +39,10 @@ jobs:
         run: npx prisma generate
         working-directory: packages/database
 
+      - name: Build shared database package
+        run: pnpm exec tsc
+        working-directory: packages/database
+
       - name: Run migrations
         run: npx prisma migrate deploy
         working-directory: packages/database
@@ -77,6 +81,10 @@ jobs:
 
       - name: Generate Prisma client
         run: npx prisma generate
+        working-directory: packages/database
+
+      - name: Build shared database package
+        run: pnpm exec tsc
         working-directory: packages/database
 
       - name: Type check
