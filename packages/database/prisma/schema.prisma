@@ -197,6 +197,7 @@ model Notification {
   priority       String       @default("normal") // low | normal | high
   readAt         DateTime?
   createdAt      DateTime     @default(now())
+  groupKey String? 
 
   @@index([organizationId])
   @@index([userId])

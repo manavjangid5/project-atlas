@@ -23,21 +23,36 @@ export default function FieldEditorRow({ field, allFields, onChange, onDelete }:
         />
         <select
           value={field.type}
-          onChange={(e) => onChange({ ...field, type: e.target.value as FormField["type"] })}
+          onChange={(e) =>
+            onChange({ ...field, type: e.target.value as FormField["type"] })
+          }
           className="bg-bg border border-border rounded-sm px-2 py-2 text-sm"
         >
           {TYPE_OPTIONS.map((t) => (
-            <option key={t} value={t}>{t}</option>
+            <option key={t} value={t}>
+              {t}
+            </option>
           ))}
         </select>
-        <button onClick={onDelete} className="text-muted hover:text-danger px-2 text-sm">✕</button>
+        <button
+          onClick={onDelete}
+          className="text-muted hover:text-danger px-2 text-sm"
+        >
+          ✕
+        </button>
       </div>
 
       {field.type === "select" && (
         <input
           value={field.options?.join(", ") || ""}
           onChange={(e) =>
-            onChange({ ...field, options: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })
+            onChange({
+              ...field,
+              options: e.target.value
+                .split(",")
+                .map((s) => s.trim())
+                .filter(Boolean),
+            })
           }
           placeholder="Options (comma separated)"
           className="w-full bg-bg border border-border rounded-sm px-3 py-2 text-sm"
@@ -53,6 +68,19 @@ export default function FieldEditorRow({ field, allFields, onChange, onDelete }:
           />
           Required
         </label>
+        <label className="flex items-center gap-1.5">
+          <input
+            type="checkbox"
+            checked={!!field.repeatable}
+            onChange={(e) =>
+              onChange({
+                ...field,
+                repeatable: e.target.checked,
+              })
+            }
+          />
+          Repeatable
+        </label>
 
         {otherFields.length > 0 && (
           <div className="flex items-center gap-1.5">
@@ -63,7 +91,10 @@ export default function FieldEditorRow({ field, allFields, onChange, onDelete }:
                 onChange({
                   ...field,
                   showIf: e.target.value
-                    ? { fieldId: e.target.value, equals: field.showIf?.equals ?? true }
+                    ? {
+                        fieldId: e.target.value,
+                        equals: field.showIf?.equals ?? true,
+                      }
                     : undefined,
                 })
               }
@@ -71,7 +102,9 @@ export default function FieldEditorRow({ field, allFields, onChange, onDelete }:
             >
               <option value="">— none —</option>
               {otherFields.map((f) => (
-                <option key={f.id} value={f.id}>{f.label || f.id}</option>
+                <option key={f.id} value={f.id}>
+                  {f.label || f.id}
+                </option>
               ))}
             </select>
             {field.showIf && (
@@ -80,7 +113,10 @@ export default function FieldEditorRow({ field, allFields, onChange, onDelete }:
                 <input
                   value={String(field.showIf.equals)}
                   onChange={(e) =>
-                    onChange({ ...field, showIf: { ...field.showIf!, equals: e.target.value } })
+                    onChange({
+                      ...field,
+                      showIf: { ...field.showIf!, equals: e.target.value },
+                    })
                   }
                   className="w-20 bg-bg border border-border rounded-sm px-1.5 py-1"
                 />

@@ -8,6 +8,7 @@ interface Notification {
   title: string;
   message: string;
   priority: string;
+  groupKey: string;
   readAt: string | null;
   createdAt: string;
 }
@@ -21,29 +22,32 @@ export default function NotificationBell() {
   const unreadCount = notifications.filter((n) => !n.readAt).length;
 
   useEffect(() => {
-  api.get("/notifications").then((res) => setNotifications(res.data));
+    api.get("/notifications").then((res) => setNotifications(res.data));
 
-  const socket = getSocket();
-  if (!socket.connected) socket.connect();
+    const socket = getSocket();
+    if (!socket.connected) socket.connect();
 
-  socket.on("authenticated", ({ ok }: { ok: boolean }) => {
-    if (ok && activeOrgId) socket.emit("join-org", activeOrgId);
-  });
+    socket.on("authenticated", ({ ok }: { ok: boolean }) => {
+      if (ok && activeOrgId) socket.emit("join-org", activeOrgId);
+    });
 
-  function handleNew(notification: Notification) {
-    setNotifications((prev) => [notification, ...prev]);
-  }
-  socket.on("notification", handleNew);
+    function handleNew(notification: Notification) {
+      setNotifications((prev) => [notification, ...prev]);
+    }
+    socket.on("notification", handleNew);
 
-  return () => {
-    socket.off("notification", handleNew);
-    socket.off("authenticated");
-  };
-    }, [activeOrgId]);
+    return () => {
+      socket.off("notification", handleNew);
+      socket.off("authenticated");
+    };
+  }, [activeOrgId]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target as Node)
+      ) {
         setOpen(false);
       }
     }
@@ -53,12 +57,30 @@ export default function NotificationBell() {
 
   async function handleMarkAllRead() {
     await api.post("/notifications/read-all");
-    setNotifications((prev) => prev.map((n) => ({ ...n, readAt: new Date().toISOString() })));
+    setNotifications((prev) =>
+      prev.map((n) => ({ ...n, readAt: new Date().toISOString() })),
+    );
+  }
+  function groupNotifications(list: Notification[]) {
+    const groups: { key: string; items: Notification[] }[] = [];
+    for (const n of list) {
+      const key = n.groupKey || n.id;
+      const last = groups[groups.length - 1];
+      if (last && last.key === key && groups.length > 0) {
+        last.items.push(n);
+      } else {
+        groups.push({ key, items: [n] });
+      }
+    }
+    return groups;
   }
 
   return (
     <div className="relative" ref={dropdownRef}>
-      <button onClick={() => setOpen(!open)} className="relative p-2 text-muted hover:text-text">
+      <button
+        onClick={() => setOpen(!open)}
+        className="relative p-2 text-muted hover:text-text"
+      >
         🔔
         {unreadCount > 0 && (
           <span className="absolute -top-0.5 -right-0.5 bg-accent text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
@@ -72,7 +94,10 @@ export default function NotificationBell() {
           <div className="flex items-center justify-between px-4 py-3 border-b border-border">
             <h3 className="text-sm font-semibold">Notifications</h3>
             {unreadCount > 0 && (
-              <button onClick={handleMarkAllRead} className="text-xs text-accent hover:underline">
+              <button
+                onClick={handleMarkAllRead}
+                className="text-xs text-accent hover:underline"
+              >
                 Mark all read
               </button>
             )}
@@ -81,16 +106,31 @@ export default function NotificationBell() {
             {notifications.length === 0 ? (
               <p className="text-xs text-muted p-4">No notifications yet.</p>
             ) : (
-              notifications.map((n) => (
-                <div
-                  key={n.id}
-                  className={`px-4 py-3 border-b border-border ${!n.readAt ? "bg-accent/5" : ""}`}
-                >
-                  <p className="text-sm font-medium">{n.title}</p>
-                  <p className="text-xs text-muted mt-0.5">{n.message}</p>
-                  <p className="text-xs text-muted mt-1">{new Date(n.createdAt).toLocaleTimeString()}</p>
-                </div>
-              ))
+              groupNotifications(notifications).map((group) => {
+                const n = group.items[0];
+
+                return (
+                  <div
+                    key={group.key}
+                    className={`px-4 py-3 border-b border-border ${
+                      !n.readAt ? "bg-accent/5" : ""
+                    }`}
+                  >
+                    <p className="text-sm font-medium">{n.title}</p>
+                    <p className="text-xs text-muted mt-0.5">{n.message}</p>
+
+                    {group.items.length > 1 && (
+                      <p className="text-xs text-accent mt-1">
+                        +{group.items.length - 1} more
+                      </p>
+                    )}
+
+                    <p className="text-xs text-muted mt-1">
+                      {new Date(n.createdAt).toLocaleTimeString()}
+                    </p>
+                  </div>
+                );
+              })
             )}
           </div>
         </div>

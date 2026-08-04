@@ -1,5 +1,8 @@
 import type { Node, Edge } from "reactflow";
 
+const INCOMPATIBLE_CHAINS: [string, string][] = [
+  ["delay", "conditional"], // Delay produces no meaningful data for a condition to test
+];
 export interface ValidationResult {
   valid: boolean;
   errors: string[];
@@ -26,6 +29,21 @@ export function validateGraph(nodes: Node[], edges: Edge[]): ValidationResult {
     visited.add(nodeId);
     return false;
   }
+  for (const edge of edges) {
+    const sourceNode = nodes.find((n) => n.id === edge.source);
+    const targetNode = nodes.find((n) => n.id === edge.target);
+    if (!sourceNode || !targetNode) continue;
+
+    const isIncompatible = INCOMPATIBLE_CHAINS.some(
+      ([from, to]) => sourceNode.data.kind === from && targetNode.data.kind === to
+    );
+    if (isIncompatible) {
+      errors.push(
+        `"${sourceNode.data.label}" (${sourceNode.data.kind}) → "${targetNode.data.label}" (${targetNode.data.kind}) may not produce compatible data for this connection.`
+      );
+    }
+  }
+  
   for (const n of nodes) {
     if (hasCycle(n.id)) {
       errors.push("This workflow contains a cycle — nodes cannot form a loop back to themselves.");

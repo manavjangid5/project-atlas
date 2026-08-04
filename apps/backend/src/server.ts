@@ -76,6 +76,7 @@ app.use((req, res, next) => {
   req.path.startsWith("/api/v1/auth/github") ||
   req.path.startsWith("/api/v1/internal") ||
   req.path.startsWith("/api/v1/webhooks") ||
+  req.path.startsWith("/api/v1/ai/stream-test") ||
   req.path.startsWith("/api/v1/public");
   if (exempt) return next();
   return doubleCsrfProtection(req, res, next);

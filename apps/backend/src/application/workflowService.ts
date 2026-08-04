@@ -100,6 +100,7 @@ export async function triggerWorkflowRun(organizationId: string,
     title: "Workflow started",
     message: `"${workflow.name}" is running (run ${run.id.slice(0, 8)})`,
     priority: "low",
+    groupKey: `workflow:${workflow.id}`,
   });
 
   return run;

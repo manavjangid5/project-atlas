@@ -3,10 +3,12 @@ import { getIO } from "../infrastructure/realtime/socketServer";
 
 interface CreateNotificationParams {
   organizationId: string;
-  userId?: string; // omit to broadcast to whole org
+  userId?: string;
   title: string;
   message: string;
   priority?: "low" | "normal" | "high";
+  groupKey?: string; // e.g. `workflow:${workflowId}` — groups all runs of the same workflow together
+  mentionedUserId?: string;
 }
 
 export async function createNotification(params: CreateNotificationParams) {
@@ -17,11 +19,16 @@ export async function createNotification(params: CreateNotificationParams) {
       title: params.title,
       message: params.message,
       priority: params.priority || "normal",
+      groupKey: params.groupKey,
+      mentionedUserId: params.mentionedUserId,
     },
   });
 
   const room = params.userId ? `user:${params.userId}` : `org:${params.organizationId}`;
   getIO().to(room).emit("notification", notification);
+  if (params.mentionedUserId) {
+    getIO().to(`user:${params.mentionedUserId}`).emit("mention", notification);
+  }
 
   return notification;
 }

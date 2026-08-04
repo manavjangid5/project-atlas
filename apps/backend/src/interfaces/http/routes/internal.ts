@@ -18,6 +18,7 @@ router.post("/internal/notify", requireInternalSecret, async (req, res) => {
     title: status === "SUCCESS" ? "Workflow completed" : "Workflow finished with issues",
     message: `"${run.workflow.name}" finished: ${status}`,
     priority: status === "FAILED" ? "high" : "normal",
+    groupKey: `workflow:${run.workflow.id}`,
   });
 
   res.json({ ok: true });

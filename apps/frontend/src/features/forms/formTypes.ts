@@ -7,6 +7,7 @@ export interface FormField {
   required?: boolean;
   options?: string[];
   showIf?: { fieldId: string; equals: string | number | boolean };
+  repeatable?: boolean;
 }
 
 export interface FormSchemaModel {
