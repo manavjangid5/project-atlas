@@ -2,7 +2,12 @@ import { useState } from "react";
 import { evaluateRule } from "./rulesApi";
 import { Button } from "../../components/Button";
 
-export default function RuleTestPanel({ ruleId }: { ruleId: string }) {
+interface Props {
+  ruleId: string;
+  onBeforeTest: () => Promise<void>;
+}
+
+export default function RuleTestPanel({ ruleId, onBeforeTest }: Props) {
   const [jsonInput, setJsonInput] = useState('{\n  "location": "India",\n  "experience": 7\n}');
   interface RuleEvalResult {
     matched: boolean;
@@ -11,15 +16,16 @@ export default function RuleTestPanel({ ruleId }: { ruleId: string }) {
   const [result, setResult] = useState<RuleEvalResult | null>(null);
   const [error, setError] = useState("");
 
-  async function handleTest() {
+   async function handleTest() {
     setError("");
     setResult(null);
     try {
       const data = JSON.parse(jsonInput);
+      await onBeforeTest(); // save current edits FIRST, then evaluate against what's now actually persisted
       const res = await evaluateRule(ruleId, data);
       setResult(res);
     } catch {
-      setError("Invalid JSON input");
+      setError("Invalid JSON input, or save failed.");
     }
   }
 

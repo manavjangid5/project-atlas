@@ -10,7 +10,10 @@ export async function createRule(name: string): Promise<RuleModel> {
   const res = await api.post("/rules", { name });
   return res.data;
 }
-
+export async function getRule(id: string): Promise<RuleModel> {
+  const res = await api.get(`/rules/${id}`);
+  return res.data;
+}
 export async function updateRule(
   id: string,
   updates: { conditions?: ConditionGroup; action?: RuleAction; isActive?: boolean }

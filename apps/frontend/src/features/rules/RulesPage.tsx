@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { listRules, createRule, updateRule } from "./rulesApi";
+import { listRules, createRule, updateRule, getRule } from "./rulesApi";
 import type { ConditionGroup, RuleModel } from "./ruleTypes";
 import { newGroup } from "./ruleTypes";
 import ConditionNodeEditor from "./ConditionNodeEditor";
@@ -69,7 +69,7 @@ useEffect(() => {
         </div>
 
         <h3 className="text-sm font-semibold text-muted mb-2">Test</h3>
-        <RuleTestPanel ruleId={active.id} />
+        <RuleTestPanel ruleId={active.id} onBeforeTest={handleSave} />
       </div>
     );
   }
@@ -94,11 +94,21 @@ useEffect(() => {
           {rules.map((rule) => (
             <button
               key={rule.id}
-              onClick={() => setActive(rule)}
+              onClick={async () => {
+                const fresh = await getRule(rule.id);
+                setActive({
+                  ...fresh,
+                  conditions: fresh.conditions?.children
+                    ? fresh.conditions
+                    : newGroup(),
+                });
+              }}
               className="text-left bg-surface border border-border rounded-md p-4 hover:border-accent transition-colors"
             >
               <h3 className="font-semibold text-sm">{rule.name}</h3>
-              <p className="text-xs text-muted mt-1">{rule.isActive ? "Active" : "Inactive"}</p>
+              <p className="text-xs text-muted mt-1">
+                {rule.isActive ? "Active" : "Inactive"}
+              </p>
             </button>
           ))}
         </div>

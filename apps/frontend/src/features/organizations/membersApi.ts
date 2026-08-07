@@ -16,8 +16,8 @@ export async function inviteMember(organizationId: string, email: string, role: 
   return res.data;
 }
 
-export async function updateMemberRole(userId: string, role: string) {
-  const res = await api.patch(`/organizations/members/${userId}/role`, { role });
+export async function updateMemberRole(organizationId: string, userId: string, role: string) {
+  const res = await api.patch(`/organizations/${organizationId}/members/${userId}/role`, { role });
   return res.data;
 }
 

@@ -26,6 +26,7 @@ export default function MembersPage() {
   }
 
   const activeOrgId = useAuthStore((s) => s.activeOrgId);
+
   useEffect(refresh, [activeOrgId]);
 
   async function handleInvite() {
@@ -50,7 +51,8 @@ export default function MembersPage() {
   }
 
   async function handleRoleChange(userId: string, role: string) {
-    await updateMemberRole(userId, role);
+    if (!activeOrgId) return;
+    await updateMemberRole(activeOrgId, userId, role);
     refresh();
   }
 

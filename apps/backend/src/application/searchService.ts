@@ -1,7 +1,7 @@
 import { prisma } from "../infrastructure/database/prismaClient";
 
 export interface SearchResult {
-  type: "workflow" | "form" | "rule" | "file" | "member";
+  type: "workflow" | "form" | "rule" | "file" | "member" | "audit" | "apikey";
   id: string;
   title: string;
   subtitle?: string;
@@ -11,7 +11,7 @@ export async function globalSearch(organizationId: string, query: string): Promi
   if (!query || query.trim().length < 2) return [];
   const q = query.trim();
 
-  const [workflows, forms, rules, files, memberships] = await Promise.all([
+  const [workflows, forms, rules, files, memberships, auditLogs, apiKeys] = await Promise.all([
     prisma.workflow.findMany({
       where: { organizationId, deletedAt: null, name: { contains: q, mode: "insensitive" } },
       take: 10,
@@ -41,6 +41,14 @@ export async function globalSearch(organizationId: string, query: string): Promi
       include: { user: true },
       take: 10,
     }),
+    prisma.auditLog.findMany({
+      where: { organizationId, action: { contains: q, mode: "insensitive" } },
+      take: 10,
+    }),
+    prisma.apiKey.findMany({
+      where: { organizationId, name: { contains: q, mode: "insensitive" } },
+      take: 10,
+    }),
   ]);
 
   const results: SearchResult[] = [
@@ -54,6 +62,9 @@ export async function globalSearch(organizationId: string, query: string): Promi
       title: m.user.name || m.user.email,
       subtitle: `Member — ${m.role}`,
     })),
+    ...auditLogs.map((a) => ({ type: "audit" as const, id: a.id, title: a.action, subtitle: "Audit Log" })),
+    ...apiKeys.map((k) => ({ type: "apikey" as const, id: k.id, title: k.name, subtitle: "API Key" })),
+
   ];
 
   return results;

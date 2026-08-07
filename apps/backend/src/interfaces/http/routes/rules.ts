@@ -13,6 +13,11 @@ router.get("/rules", requireAuth, requireTenant, async (req: TenantRequest, res)
   res.json(await ruleService.listRules(req.tenant!.organizationId));
 });
 
+router.get("/rules/:id", requireAuth, requireTenant, async (req: TenantRequest, res) => {
+  const rule = await ruleService.getRule(req.tenant!.organizationId, paramStr(req.params.id));
+  res.json(rule);
+});
+
 router.post("/rules", requireAuth, requireTenant, requirePermission("rule", "create"), async (req: TenantRequest, res) => {
   const rule = await ruleService.createRule(req.tenant!.organizationId, req.body.name);
   res.status(201).json(rule);

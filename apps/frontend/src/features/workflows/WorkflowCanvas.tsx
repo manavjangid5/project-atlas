@@ -24,6 +24,7 @@ import type { WorkflowNodeData } from "./workflowTypes";
 import { validateGraph } from "./graphValidation";
 import { api } from "../../lib/api";
 import { useGraphHistory } from "./useGraphHistory";
+import { AxiosError } from "axios";
 
 const nodeTypes = { custom: CustomNode };
 interface Props {
@@ -52,12 +53,22 @@ function CanvasInner({ workflow, onSaved }: Props) {
     { kind: string; label: string; reason: string }[]
   >([]);
   const [suggestLoading, setSuggestLoading] = useState(false);
-  const { pushHistory, undo, redo } = useGraphHistory(nodes, edges, setNodes, setEdges);
-  const handleNodeDelete = useCallback((nodeId: string) => {
-    pushHistory(); // MUST run before the mutation, capturing pre-delete state
-    setNodes((nds) => nds.filter((n) => n.id !== nodeId));
-    setEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId));
-  }, [pushHistory, setNodes, setEdges]);
+  const { pushHistory, undo, redo } = useGraphHistory(
+    nodes,
+    edges,
+    setNodes,
+    setEdges,
+  );
+  const handleNodeDelete = useCallback(
+    (nodeId: string) => {
+      pushHistory(); // MUST run before the mutation, capturing pre-delete state
+      setNodes((nds) => nds.filter((n) => n.id !== nodeId));
+      setEdges((eds) =>
+        eds.filter((e) => e.source !== nodeId && e.target !== nodeId),
+      );
+    },
+    [pushHistory, setNodes, setEdges],
+  );
 
   useEffect(() => {
     function handleDeleteEvent(e: Event) {
@@ -70,6 +81,7 @@ function CanvasInner({ workflow, onSaved }: Props) {
   }, [handleNodeDelete]);
 
   const handleSave = useCallback(async () => {
+    pushHistory();
     setSaving(true);
     try {
       const updated = await updateWorkflowGraph(workflow.id, {
@@ -80,7 +92,7 @@ function CanvasInner({ workflow, onSaved }: Props) {
     } finally {
       setSaving(false);
     }
-  }, [nodes, edges, workflow.id, onSaved]);
+  }, [nodes, edges, workflow.id, onSaved, pushHistory]);
 
   const handleRun = useCallback(async () => {
     const validation = validateGraph(nodes, edges);
@@ -89,7 +101,14 @@ function CanvasInner({ workflow, onSaved }: Props) {
       return;
     }
     await handleSave();
-    await runWorkflow(workflow.id);
+    try {
+      await runWorkflow(workflow.id);
+      setShowRuns(true);
+    } catch (err) {
+      const message =
+        err instanceof AxiosError ? err.response?.data?.error : undefined;
+      alert(message || "Failed to start this workflow run.");
+    }
     setShowRuns(true);
     setShowVersions(false);
     setSelectedNodeId(null);
@@ -167,7 +186,7 @@ function CanvasInner({ workflow, onSaved }: Props) {
       pushHistory();
       setEdges((eds) => addEdge(edge, eds));
     },
-    [nodes, setEdges],
+    [nodes, setEdges, pushHistory],
   );
 
   function onDragOver(e: React.DragEvent) {
@@ -194,10 +213,10 @@ function CanvasInner({ workflow, onSaved }: Props) {
   }
 
   function onNodeClick(_e: React.MouseEvent, node: Node) {
-  setSelectedNodeId(node.id);
-  setShowRuns(false);
-  setShowVersions(false);
-}
+    setSelectedNodeId(node.id);
+    setShowRuns(false);
+    setShowVersions(false);
+  }
 
   function handleNodeConfigSave(
     nodeId: string,
@@ -234,7 +253,11 @@ function CanvasInner({ workflow, onSaved }: Props) {
               Webhook: {import.meta.env.VITE_API_URL}/webhooks/
               {workflow.webhookToken}
             </span>
-            <Button variant="secondary" onClick={handleSuggestNext} disabled={suggestLoading}>
+            <Button
+              variant="secondary"
+              onClick={handleSuggestNext}
+              disabled={suggestLoading}
+            >
               {suggestLoading ? "Thinking…" : "💡 Suggest next"}
             </Button>
             <Button variant="secondary" onClick={toggleVersions}>

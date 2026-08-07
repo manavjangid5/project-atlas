@@ -9,10 +9,11 @@ const TYPE_ROUTES: Record<string, string> = {
   rule: "/dashboard/rules",
   file: "/dashboard/files",
   member: "/dashboard/members",
+  audit: "/dashboard/audit", apikey: "/dashboard/api-keys",
 };
 
 const TYPE_ICONS: Record<string, string> = {
-  workflow: "⚙", form: "📋", rule: "🔀", file: "📎", member: "👤",
+  workflow: "⚙", form: "📋", rule: "🔀", file: "📎", member: "👤",audit: "📜", apikey: "🔑"
 };
 
 export default function GlobalSearchBar() {

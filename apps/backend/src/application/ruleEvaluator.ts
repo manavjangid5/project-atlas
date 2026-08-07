@@ -27,6 +27,7 @@ export function evaluateConditions(node: ConditionNode, data: Record<string, any
     return evalLeafCondition(node.field, node.operator, node.value, data);
   }
   if (node.type === "group") {
+    if (node.children.length === 0) return false; // an empty group is "not configured", never a match
     if (node.logic === "AND") return node.children.every((c) => evaluateConditions(c, data));
     return node.children.some((c) => evaluateConditions(c, data));
   }
