@@ -42,7 +42,8 @@ function CanvasInner({ workflow, onSaved }: Props) {
     workflow.graph.edges as Edge[],
   );
   const [saving, setSaving] = useState(false);
-  const [selectedNode, setSelectedNode] = useState<Node | null>(null);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const selectedNode = nodes.find((n) => n.id === selectedNodeId) || null;
   const [showRuns, setShowRuns] = useState(false);
   const [showVersions, setShowVersions] = useState(false);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
@@ -91,7 +92,7 @@ function CanvasInner({ workflow, onSaved }: Props) {
     await runWorkflow(workflow.id);
     setShowRuns(true);
     setShowVersions(false);
-    setSelectedNode(null);
+    setSelectedNodeId(null);
   }, [nodes, edges, handleSave, workflow.id]);
 
   useEffect(() => {
@@ -193,10 +194,10 @@ function CanvasInner({ workflow, onSaved }: Props) {
   }
 
   function onNodeClick(_e: React.MouseEvent, node: Node) {
-    setSelectedNode(node);
-    setShowRuns(false);
-    setShowVersions(false);
-  }
+  setSelectedNodeId(node.id);
+  setShowRuns(false);
+  setShowVersions(false);
+}
 
   function handleNodeConfigSave(
     nodeId: string,
@@ -213,13 +214,13 @@ function CanvasInner({ workflow, onSaved }: Props) {
   function toggleRuns() {
     setShowRuns(!showRuns);
     setShowVersions(false);
-    setSelectedNode(null);
+    setSelectedNodeId(null);
   }
 
   function toggleVersions() {
     setShowVersions(!showVersions);
     setShowRuns(false);
-    setSelectedNode(null);
+    setSelectedNodeId(null);
   }
 
   return (
@@ -301,7 +302,7 @@ function CanvasInner({ workflow, onSaved }: Props) {
         <NodeConfigPanel
           key={selectedNode.id}
           node={selectedNode}
-          onClose={() => setSelectedNode(null)}
+          onClose={() => setSelectedNodeId(null)}
           onSave={handleNodeConfigSave}
           onDelete={handleNodeDelete}
         />

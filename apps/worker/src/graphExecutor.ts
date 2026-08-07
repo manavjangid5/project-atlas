@@ -59,18 +59,20 @@ export async function executeGraph(runId: string, graph: Graph, initialPayload?:
 
   const completed = new Set<string>();
   const failed = new Set<string>();
-  const skipped = new Set<string>();
-  // Records which branch a conditional node actually took, once it's run.
+  const skippedDueToFailure = new Set<string>();
+  const skippedDueToBranch = new Set<string>();
   const branchDecisions = new Map<string, "true" | "false">();
+  const skipped = new Set<string>();
   const ctx: ExecutionContext = { variables: initialPayload ? { trigger_payload: initialPayload } : {}, organizationId };
   const nodeMap = new Map(graph.nodes.map((n) => [n.id, n]));
 
+  function isNodeDown(nodeId: string): boolean {
+    return failed.has(nodeId) || skippedDueToFailure.has(nodeId);
+  }
+
   function edgeSatisfied(edge: GraphEdge): "yes" | "no" | "pending" {
-    if (failed.has(edge.source)) return "no";
-    if (skipped.has(edge.source)) return "no";
+    if (failed.has(edge.source) || skippedDueToFailure.has(edge.source) || skippedDueToBranch.has(edge.source)) return "no";
     if (!completed.has(edge.source)) return "pending";
-    // Source completed — if this edge is a labeled conditional branch,
-    // only "satisfied" if it matches the branch the source actually took.
     if (edge.data?.branch) {
       const taken = branchDecisions.get(edge.source);
       return taken === edge.data.branch ? "yes" : "no";
@@ -101,8 +103,15 @@ export async function executeGraph(runId: string, graph: Graph, initialPayload?:
     }
 
     for (const nodeId of toSkip) {
-      await logNode(runId, nodeId, "SKIPPED", "Upstream failed, or the branch condition was not taken");
-      skipped.add(nodeId);
+      const edges = incoming.get(nodeId) || [];
+      const dueToRealFailure = edges.some((e) => isNodeDown(e.source));
+      if (dueToRealFailure) {
+        skippedDueToFailure.add(nodeId);
+        await logNode(runId, nodeId, "SKIPPED", "Upstream node failed");
+      } else {
+        skippedDueToBranch.add(nodeId);
+        await logNode(runId, nodeId, "SKIPPED", "Branch condition not taken (expected)");
+      }
       remaining.delete(nodeId);
     }
 
@@ -127,11 +136,11 @@ export async function executeGraph(runId: string, graph: Graph, initialPayload?:
   }
 
   const finalStatus =
-    failed.size === 0 && skipped.size === 0
-      ? "SUCCESS"
-      : completed.size > 0
-      ? "PARTIAL"
-      : "FAILED";
+  failed.size === 0 && skippedDueToFailure.size === 0
+    ? "SUCCESS"
+    : completed.size > 0
+    ? "PARTIAL"
+    : "FAILED";
 
   await prisma.executionRun.update({
     where: { id: runId },

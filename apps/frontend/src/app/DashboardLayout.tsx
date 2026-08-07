@@ -82,7 +82,7 @@ export default function DashboardLayout() {
 
   return (
     <div className="h-screen flex bg-bg overflow-hidden">
-      <aside className="w-56 border-r border-border flex flex-col bg-surface h-full overflow-hidden">
+      <aside className="w-64 border-r border-border flex flex-col bg-surface h-full overflow-hidden">
         <div className="px-4 py-5 border-b border-border">
           <h1 className="font-extrabold text-lg tracking-tight">Atlas</h1>
         </div>

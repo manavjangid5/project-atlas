@@ -12,7 +12,9 @@ export default function VersionsPanel({ workflowId, onRestored }: { workflowId: 
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
   const [error, setError] = useState("");
-  const [selected, setSelected] = useState<string[]>([]);
+  // Store the full version OBJECTS, not just ids — this is what lets
+  // selection survive navigating to a different page.
+  const [selected, setSelected] = useState<Version[]>([]);
   const [showDiff, setShowDiff] = useState(false);
 
   useEffect(() => {
@@ -33,14 +35,14 @@ export default function VersionsPanel({ workflowId, onRestored }: { workflowId: 
     }
   }
 
-  function toggleSelect(id: string) {
-    setSelected((prev) =>
-      prev.includes(id) ? prev.filter((v) => v !== id) : prev.length < 2 ? [...prev, id] : [prev[1], id]
-    );
+  function toggleSelect(v: Version) {
+    setSelected((prev) => {
+      const already = prev.find((s) => s.id === v.id);
+      if (already) return prev.filter((s) => s.id !== v.id);
+      if (prev.length < 2) return [...prev, v];
+      return [prev[1], v]; // keep the most recent two picks
+    });
   }
-
-  const versionA = versions.find((v) => v.id === selected[0]);
-  const versionB = versions.find((v) => v.id === selected[1]);
 
   return (
     <div className="w-80 border-l border-border bg-surface flex flex-col h-full">
@@ -55,7 +57,12 @@ export default function VersionsPanel({ workflowId, onRestored }: { workflowId: 
       {error && <p className="text-danger text-xs px-4 pt-2">{error}</p>}
       {selected.length > 0 && (
         <p className="text-xs text-muted px-4 pt-2">
-          {selected.length}/2 selected for comparison
+          {selected.map((s) => `v${s.version}`).join(", ")} selected ({selected.length}/2)
+          {selected.length > 0 && (
+            <button onClick={() => setSelected([])} className="ml-2 text-danger hover:underline">
+              clear
+            </button>
+          )}
         </p>
       )}
 
@@ -67,8 +74,8 @@ export default function VersionsPanel({ workflowId, onRestored }: { workflowId: 
             <div key={v.id} className="px-4 py-3 border-b border-border flex items-center gap-2">
               <input
                 type="checkbox"
-                checked={selected.includes(v.id)}
-                onChange={() => toggleSelect(v.id)}
+                checked={!!selected.find((s) => s.id === v.id)}
+                onChange={() => toggleSelect(v)}
               />
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium">v{v.version}</p>
@@ -91,10 +98,10 @@ export default function VersionsPanel({ workflowId, onRestored }: { workflowId: 
         </div>
       )}
 
-      {showDiff && versionA && versionB && (
+      {showDiff && selected.length === 2 && (
         <VersionDiff
-          versionA={versionA.version < versionB.version ? versionA : versionB}
-          versionB={versionA.version < versionB.version ? versionB : versionA}
+          versionA={selected[0].version < selected[1].version ? selected[0] : selected[1]}
+          versionB={selected[0].version < selected[1].version ? selected[1] : selected[0]}
           onClose={() => setShowDiff(false)}
         />
       )}

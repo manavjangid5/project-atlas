@@ -12,6 +12,10 @@ export interface NodeResult {
   error?: string;
 }
 
+function getByPath(obj: any, path: string): any {
+  return path.split(".").reduce((o, k) => (o != null ? o[k] : undefined), obj);
+}
+
 function resolveTemplateValue(value: any, ctx: ExecutionContext): any {
   if (typeof value === "string") {
     return value.replace(/\{([\w-]+)\}/g, (_, key) => {
@@ -131,8 +135,11 @@ async function executeSwitch(config: any, ctx: ExecutionContext): Promise<NodeRe
 }
 
 async function executeLoop(config: any, ctx: ExecutionContext): Promise<NodeResult> {
-  const items = ctx.variables[config.arrayVariable];
-  if (!Array.isArray(items)) return { status: "FAILED", error: `${config.arrayVariable} is not an array` };
+  const items = getByPath(ctx.variables, config.arrayVariable);
+  if (!Array.isArray(items)) {
+    const available = Object.keys(ctx.variables).join(", ") || "(none yet)";
+    return { status: "FAILED", error: `"${config.arrayVariable}" is not an array. Available variables: ${available}` };
+  }
   const results = [];
   for (const item of items.slice(0, config.maxIterations || 20)) {
     const itemCtx: ExecutionContext = { variables: { ...ctx.variables, loop_item: item } };
@@ -169,7 +176,7 @@ export async function executeNode(kind: string, config: any, ctx: ExecutionConte
     case "delay": return executeDelay(config);
     case "conditional": return executeConditional(config, ctx);
     case "slack": return executeSlack(config);
-    case "webhook": return executeWebhook(config,ctx);
+    case "webhook": return executeWebhook(config, ctx);
     case "ai_prompt": return executeAiPrompt(config, ctx);
     case "github": return executeGithub(config);
     case "email": return executeEmail(config, ctx);

@@ -23,26 +23,24 @@ export default function AuditLogPage() {
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
   const [loading, setLoading] = useState(true);
-
-  // useEffect(() => {
-  //   setLoading(true);
-  //   fetchAuditLogs(page)
-  //     .then((res) => {
-  //       setLogs(res.logs);
-  //       setPages(res.pages);
-  //     })
-  //     .finally(() => setLoading(false));
-  // }, [page]);
   const activeOrgId = useAuthStore((s) => s.activeOrgId);
-useEffect(() => {
-  setPage(1);
-  setLoading(true);
-  fetchAuditLogs(1).then((res) => {
-    setLogs(res.logs);
-    setPages(res.pages);
-    setLoading(false);
-  });
-}, [activeOrgId, page]);
+
+  // Reset to page 1 only when the org changes — not on every page click.
+  useEffect(() => {
+    setPage(1);
+  }, [activeOrgId]);
+
+  // Fetch whatever the CURRENT page is (was hardcoded to 1 before — that
+  // was the bug: clicking Next/Previous updated `page` but the fetch
+  // always requested page 1 anyway).
+  useEffect(() => {
+    setLoading(true);
+    fetchAuditLogs(page).then((res) => {
+      setLogs(res.logs);
+      setPages(res.pages);
+      setLoading(false);
+    });
+  }, [page, activeOrgId]);
 
   return (
     <div className="p-8 max-w-4xl">

@@ -57,7 +57,7 @@ export const NODE_CONFIG_SCHEMAS: Record<NodeKind, ConfigField[]> = {
     { key: "field", label: "Field to switch on", type: "text" },
   ],
   loop: [
-    { key: "arrayVariable", label: "Array variable name", type: "text" },
+    { key: "arrayVariable", label: "Array variable (e.g. node-id_output or node-id_output.items)", type: "text" },
     { key: "maxIterations", label: "Max iterations", type: "number" },
   ],
   database_query: [
