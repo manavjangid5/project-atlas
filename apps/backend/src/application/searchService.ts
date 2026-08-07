@@ -1,7 +1,7 @@
 import { prisma } from "../infrastructure/database/prismaClient";
 
 export interface SearchResult {
-  type: "workflow" | "form" | "rule" | "file" | "member" | "audit" | "apikey";
+  type: "workflow" | "form" | "rule" | "file" | "member" | "audit" | "apikey" | "organization" | "log";
   id: string;
   title: string;
   subtitle?: string;
@@ -11,7 +11,7 @@ export async function globalSearch(organizationId: string, query: string): Promi
   if (!query || query.trim().length < 2) return [];
   const q = query.trim();
 
-  const [workflows, forms, rules, files, memberships, auditLogs, apiKeys] = await Promise.all([
+  const [workflows, forms, rules, files, memberships, auditLogs, apiKeys, organizations, executionLogs] = await Promise.all([
     prisma.workflow.findMany({
       where: { organizationId, deletedAt: null, name: { contains: q, mode: "insensitive" } },
       take: 10,
@@ -49,6 +49,15 @@ export async function globalSearch(organizationId: string, query: string): Promi
       where: { organizationId, name: { contains: q, mode: "insensitive" } },
       take: 10,
     }),
+    prisma.organization.findMany({
+      where: { id: organizationId, name: { contains: q, mode: "insensitive" } },
+      take: 5,
+    }),
+    prisma.executionLog.findMany({
+      where: { run: { workflow: { organizationId } }, message: { contains: q, mode: "insensitive" } },
+      take: 10,
+      include: { run: { include: { workflow: true } } },
+    }),
   ]);
 
   const results: SearchResult[] = [
@@ -64,6 +73,13 @@ export async function globalSearch(organizationId: string, query: string): Promi
     })),
     ...auditLogs.map((a) => ({ type: "audit" as const, id: a.id, title: a.action, subtitle: "Audit Log" })),
     ...apiKeys.map((k) => ({ type: "apikey" as const, id: k.id, title: k.name, subtitle: "API Key" })),
+    ...organizations.map((o) => ({ type: "organization" as const, id: o.id, title: o.name, subtitle: "Organization" })),
+    ...executionLogs.map((l) => ({
+      type: "log" as const,
+      id: l.id,
+      title: l.message?.slice(0, 60) || l.nodeId,
+      subtitle: `Log — ${l.run.workflow.name}`,
+    })),
 
   ];
 

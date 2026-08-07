@@ -6,6 +6,8 @@ import { evaluateAllActiveRules } from "./ruleService";
 import { triggerWorkflowRun } from "./workflowService";
 import { createNotification } from "./notificationService";
 import { RuleAction } from "../domain/ruleTypes";
+import { uploadToR2 } from "../infrastructure/storage/r2Client";
+import crypto from "crypto";
 
 export async function listForms(organizationId: string) {
   return prisma.formSchema.findMany({ where: { organizationId }, orderBy: { updatedAt: "desc" } });
@@ -54,33 +56,44 @@ export async function submitForm(
   organizationId: string,
   formId: string,
   data: Record<string, any>,
-  submittedBy?: string
+  submittedBy?: string,
+  files: Express.Multer.File[] = []
 ) {
   const form = await getForm(organizationId, formId);
+
+  // Upload any real files to R2, replacing the field's value with a
+  // stored reference (key + original name) instead of leaving it as
+  // an unhandled browser File — this is what makes the "file" field
+  // type in the form builder a genuine feature rather than cosmetic.
+  for (const file of files) {
+    const key = `${organizationId}/form-submissions/${crypto.randomUUID()}-${file.originalname}`;
+    await uploadToR2(key, file.buffer, file.mimetype);
+    data[file.fieldname] = { storageKey: key, fileName: file.originalname, mimeType: file.mimetype };
+  }
+
   validateSubmission(form.fields as any[], data);
 
   const submission = await prisma.formSubmission.create({
     data: { formId, data: data as Prisma.InputJsonValue, submittedBy },
   });
 
-  // This is the actual wiring the review flagged as missing: rule
-  // actions were previously computed but never run anywhere. Every
-  // form submission is now evaluated against the org's active rules,
-  // and a matched action genuinely fires.
+  // Rule actions were previously computed but never run anywhere.
+  // Every form submission is now evaluated against the org's active
+  // rules, and a matched action genuinely fires.
   const matched = await evaluateAllActiveRules(organizationId, data);
   for (const rule of matched) {
-  const action = rule.action as unknown as RuleAction;
-  if (action?.kind === "NOTIFY") {
-    await createNotification({
-      organizationId,
-      title: `Rule triggered: ${rule.name}`,
-      message: action.message || "A rule condition was met on form submission.",
-      priority: "normal",
-    });
-  } else if (action?.kind === "TRIGGER_WORKFLOW" && action.workflowId) {
-    await triggerWorkflowRun(organizationId, action.workflowId, { form_submission: data });
+    const action = rule.action as unknown as RuleAction;
+    if (action?.kind === "NOTIFY") {
+      await createNotification({
+        organizationId,
+        title: `Rule triggered: ${rule.name}`,
+        message: action.message || "A rule condition was met on form submission.",
+        priority: "normal",
+      });
+    } else if (action?.kind === "TRIGGER_WORKFLOW" && action.workflowId) {
+      await triggerWorkflowRun(organizationId, action.workflowId, { form_submission: data });
+    }
   }
-}
 
   return submission;
 }

@@ -113,7 +113,13 @@ export default function FormPreview({ fields, onSubmit }: Props) {
                 onChange={(e) => handleChange(field.id, e.target.checked)}
               />
             ) : field.type === "file" ? (
-              <input type="file" className="text-sm text-muted" />
+              <input
+                type="file"
+                onChange={(e) =>
+                  handleChange(field.id, e.target.files?.[0] || null)
+                }
+                className="text-sm text-muted"
+              />
             ) : (
               <input
                 type={field.type}

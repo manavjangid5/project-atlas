@@ -4,6 +4,8 @@ import { requireTenant, TenantRequest, requireTenantRole, requirePermission } fr
 import * as formService from "../../../application/formService";
 import { validateBody } from "../middleware/validate";
 import { createFormSchema, updateFormFieldsSchema, submitFormSchema } from "../../../domain/validationSchemas";
+import multer from "multer";
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
 
 
 const router = Router();
@@ -34,15 +36,24 @@ router.patch("/forms/:id", requireAuth, requireTenant, requirePermission("form",
   res.json(form);
 });
 
-router.post("/forms/:id/submit", requireAuth, requireTenant, requirePermission("form", "submit"), validateBody(submitFormSchema), async (req: TenantRequest, res) => {
-  const submission = await formService.submitForm(
-    req.tenant!.organizationId,
-    paramStr(req.params.id),
-    req.body.data,
-    req.user?.id
-  );
-  res.status(201).json(submission);
-});
+router.post("/forms/:id/submit",
+  requireAuth,
+  requireTenant,
+  requirePermission("form", "submit"),
+  upload.any(), // accepts any file fields alongside regular form data
+  async (req: TenantRequest, res) => {
+    const rawData = req.body.data ? JSON.parse(req.body.data) : req.body;
+    const files = (req.files as Express.Multer.File[]) || [];
+    const submission = await formService.submitForm(
+      req.tenant!.organizationId,
+      paramStr(req.params.id),
+      rawData,
+      req.user?.id,
+      files
+    );
+    res.status(201).json(submission);
+  }
+);
 
 router.get("/forms/:id/submissions", requireAuth, requireTenant, async (req: TenantRequest, res) => {
   res.json(await formService.listSubmissions(req.tenant!.organizationId, paramStr(req.params.id)));
