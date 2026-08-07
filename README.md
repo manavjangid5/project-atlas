@@ -6,7 +6,7 @@ Observability is structured request logging (morgan), per-node execution logs, a
 
 🔗 **Live app:** https://project-atlas-frontend.onrender.com
 🔗 **Live API:** https://project-atlas-vupz.onrender.com/api/v1/health
-🔗 **API docs (Swagger):** `<backend URL>/api/docs`
+🔗 **API docs (Swagger):** https://project-atlas-vupz.onrender.com/api/docs/
 
 ---
 
@@ -46,7 +46,7 @@ Docs: **[API.md](docs/API.md)** · **[DATABASE_ERD.md](docs/DATABASE_ERD.md)** �
 Drag-and-drop canvas (React Flow). Node types: HTTP Request, Delay, Conditional (real true/false branching, not cosmetic), Slack, AI Prompt, Webhook, GitHub, Email (via Resend, sandbox-mode recipient restriction applies), Switch, Loop, Database Query. Click a node to configure it — the panel shows the node's real ID so you can reference its output in another node via `{that-id_output}`. Save, Run, or use **Generate with AI** to create a whole workflow from a plain-English instruction, and **Suggest next** to get AI-suggested next nodes for the graph you're building. Keyboard shortcuts: Ctrl/Cmd+S save, Ctrl/Cmd+Enter run, Ctrl/Cmd+Z / Ctrl/Cmd+Shift+Z undo/redo. **Versions** panel shows paginated history with a two-version **diff** view and one-click restore. Workflows also expose a public **webhook URL** for external triggering and support **cron scheduling** (set via API for now, see API.md).
 
 ### Forms
-Fields: text, number, email, select, checkbox, file (upload UI only — not yet wired to real file storage). Conditional visibility (showIf) and **repeatable fields** ("+ Add another") are both supported.
+Fields: text, number, email, select, checkbox, file (genuinely uploads to R2 on submission, same storage backend as the standalone Files module). Conditional visibility (showIf) and **repeatable fields** ("+ Add another") are both supported.
 
 ### Rules
 Nested AND/OR condition trees, evaluated against arbitrary JSON — including **nested field paths** (e.g. candidate.experience, not just top-level keys). Actions (NOTIFY / TRIGGER_WORKFLOW) are wired into real form-submission flow, not just the test panel.
@@ -85,7 +85,7 @@ cd apps/backend && pnpm dev   # terminal 1
 cd apps/worker && pnpm dev    # terminal 2
 cd apps/frontend && pnpm dev  # terminal 3
 ```
-Visit http://localhost:5173. See DEPLOYMENT.md for the full environment variable list — note that **local and production use separate RabbitMQ queue names** (workflow-executions-dev vs workflow-executions) so a running deployed worker never intercepts local test traffic.
+See DEPLOYMENT.md for the full environment variable list — note that **local and production use separate RabbitMQ queue names** (workflow-executions-dev vs workflow-executions) so a running deployed worker never intercepts local test traffic.
 
 ## CI/CD
 
@@ -93,8 +93,8 @@ Every push to main runs type-checking, linting (zero-warning enforced, not bypas
 
 ## Testing
 
-Unit tests: rule evaluator (nested-path resolution, empty-group vacuous-truth guard, full nested AND/OR trees against realistic data), JWT/refresh-token rotation and reuse detection, graph executor (parallel branches, skip-on-failure, and correctly distinguishing a legitimately-skipped conditional branch from a genuine upstream failure), the dynamic permission model's override-vs-default-matrix fallback, and the SSRF guard's actual IP/protocol blocklist. Integration tests: cross-tenant access denial, CSRF regression, refresh-token-family revocation. One Playwright e2e test covers the core login→build→run journey. Several of the above tests exist specifically because manual testing (see `docs/FINAL_SMOKE_TEST.md`) found real bugs with zero prior automated coverage — see TRADEOFFS.md for the full list of what was found and fixed. See **docs/DEPLOYMENT.md**'s "Verification status" section for an honest breakdown of what's been confirmed live vs. locally tested only.
+Unit tests: rule evaluator (nested-path resolution, empty-group vacuous-truth guard, full nested AND/OR trees against realistic data), JWT/refresh-token rotation and reuse detection, graph executor (parallel branches, skip-on-failure, and correctly distinguishing a legitimately-skipped conditional branch from a genuine upstream failure), the dynamic permission model's override-vs-default-matrix fallback, the SSRF guard's actual IP/protocol blocklist, global search's result composition, and form submission's real R2 file-upload path. Integration tests: cross-tenant access denial, CSRF regression, refresh-token-family revocation. One Playwright e2e test covers the core login→build→run journey. Several of the above tests exist specifically because manual testing found real bugs with zero prior automated coverage — see TRADEOFFS.md for the full list of what was found and fixed. The complete manual regression script, **docs/TESTING_GUIDE.md**, has been run and confirmed against both the local environment and the deployed production URL — see **docs/DEPLOYMENT.md**'s "Verification status" section for the precise, itemized breakdown.
 
 ## Honest known gaps
 
-A Grafana dashboard (the `/metrics` scrape endpoint itself is real, but nothing visualizes it), email-based invitation delivery, notification free-text @mention parsing (mentions are supported via structured rule-action config, not @name text parsing), form file-upload fields not wired to real storage, cron scheduler is in-process (a backend restart can miss a run due exactly during the restart window, not queued for later). Full list with reasoning: **docs/TRADEOFFS.md**.
+A Grafana dashboard (the `/metrics` scrape endpoint itself is real, but nothing visualizes it), email-based invitation delivery, notification free-text @mention parsing (mentions are supported via structured rule-action config, not @name text parsing), cron scheduler is in-process (a backend restart can miss a run due exactly during the restart window, not queued for later), no automated production migration/queue-sync step in the deploy pipeline (a manual step, which caused two real incidents during final verification — see TRADEOFFS.md), and **login does not work in Incognito/Private browsing** on the deployed environment specifically — a structural consequence of the frontend and backend being on separate Render subdomains (auth cookies are third-party from the browser's perspective, and Incognito blocks those by default). Regular browser sessions are unaffected; full explanation in TRADEOFFS.md. Full list with reasoning: **docs/TRADEOFFS.md**.

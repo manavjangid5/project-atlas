@@ -8,44 +8,54 @@ env-var driven.
 
 Being precise about this rather than implying uniform confidence:
 
-**Confirmed working end-to-end in production (Render), with explicit
-successful test results seen during this build:** registration/login,
-password auth, Google OAuth, session refresh, multi-tenant isolation,
-workflow save/run/retry/parallel-branches, AI Prompt node (real Gemini
-output), file upload/download/share, CSRF protection, `/health` reporting
-both DB and queue as connected, the `packages/database` fix.
+**Confirmed working end-to-end in production (Render)**, via the full
+manual regression pass documented in `docs/TESTING_GUIDE.md`, run
+against both the local environment and the deployed URL: registration/
+login, password auth, Google OAuth, session refresh, multi-tenant
+isolation, workflow save/run/retry/parallel-branches/conditional
+branching, AI Prompt node (real Gemini output), AI workflow generation, AI
+next-node suggestion, AI streaming preview, priority queues, cron
+scheduling (including two real production deployment issues found and
+fixed along the way — see below), the dynamic permission model across
+every mutating/privileged route, all node types (HTTP, Delay, Conditional,
+Slack, AI Prompt, Webhook, GitHub, Email, Switch, Loop, Database Query),
+notification grouping, dark/light theme toggle, undo/redo, the version
+diff view (including cross-page comparison), per-API-key rate limiting,
+the real `/metrics` endpoint, Zod validation on all mutating routes,
+global search (including organizations and execution logs), form file
+uploads genuinely stored in R2, file upload/download/share, CSRF
+protection, `/health` reporting both DB and queue as connected, the
+`packages/database` fix, and every bug fix from the manual smoke-testing
+passes (rule evaluator vacuous-truth and dot-path bugs, conditional-branch
+status semantics, audit log pagination, member role-change URL bug, rule
+Test-panel stale-save bug, and others — full list in TRADEOFFS.md).
+
+**Two real production-only issues were found and fixed during this
+verification pass** — both infrastructure/data-state problems, not code
+bugs: (1) the production RabbitMQ queue predated the `x-max-priority`
+argument added partway through the build and had to be deleted and
+recreated; (2) several schema migrations (including the one adding
+`cronSchedule`) had only ever been run against the local database, not
+Render's — `npx prisma migrate deploy` had to be run against the
+production database directly. Both are now resolved; the general lesson
+(schema/queue-argument changes require a manual production sync step, they
+don't apply themselves) is documented in TRADEOFFS.md.
 
 **Configured and code-complete, but not separately re-confirmed by an
 explicit end-to-end test in this conversation:**
 - **GitHub OAuth** — credentials configured in both GitHub and the backend;
-  uses the exact same code path as Google OAuth (which was confirmed
-  working after the `trust proxy` fix), so it is expected to work
-  identically, but a successful "Continue with GitHub" login was never
-  independently retested and confirmed after that fix.
-- **Resend email node** — a test run completed with `status: SUCCESS`,
-  confirming the node executed without error, but actual inbox delivery of
-  that email was not explicitly confirmed.
+  uses the exact same code path as Google OAuth (confirmed working), so it
+  is expected to work identically, but a successful "Continue with GitHub"
+  login specifically was never independently retested and confirmed.
+- **Resend email node** — test runs complete with `status: SUCCESS`,
+  confirming the node executes without error, but actual inbox delivery of
+  a sent email was not explicitly confirmed by checking an inbox.
 
-**Built and verified via local (`pnpm dev`) testing, but not re-verified
-against the deployed Render environment after being added:** AI workflow
-generation, AI next-node suggestion, AI streaming preview, priority queues,
-cron scheduling, the dynamic permission model (including its recent
-extension to rule-evaluate/file-restore/file-share/version-restore), the
-GitHub/Email/Switch/Loop/Database Query nodes, notification grouping,
-dark/light theme toggle, undo/redo, the version diff view (including
-cross-page comparison), per-API-key rate limiting, the real `/metrics`
-endpoint, the extended Zod validation on forms/rules/feature-flags, and the
-fixes made across two rounds of manual bug-report passes (scrollbar/layout,
-Database Query node's `organizationId`/`take` type bug, form builder field
-layout and "Show only if" semantics, rule evaluator dot-path resolution and
-vacuous-truth guard, conditional-branch-skip status semantics, audit log
-pagination, member role-change URL bug, rule Test-panel stale-save bug).
-These were built and confirmed working during active local debugging
-sessions; Render's build commands and env vars have been documented to
+
 match (including the new `prom-client` dependency, which needs no separate
 env var — it's a plain npm package), but a fresh deploy-and-click-through
 of this full batch was not completed and confirmed within this
-conversation. **Run the full `docs/FINAL_SMOKE_TEST.md` script against the
+conversation. **Run the full `docs/TESTING_GUIDE.md` script against the
 deployed URL before treating any of this batch as production-verified.**
 
 ## External services (set these up first)

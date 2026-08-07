@@ -158,7 +158,7 @@ actually requiring the key).
 
 | Method | Path | Description |
 |---|---|---|
-| GET | `/search?q=` | Cross-module search via Postgres `ILIKE`: workflows, forms, rules, files, members, audit log actions, and API key names. Organizations and execution logs specifically are not yet indexed (spec also lists these — a real, small remaining gap). |
+| GET | `/search?q=` | Cross-module search via Postgres `ILIKE`: workflows, forms, rules, files, members, audit log actions, API key names, organizations, and execution log messages. Individual form submissions and rule test history are not indexed — a smaller remaining gap. |
 
 ## Notifications (`/notifications`)
 

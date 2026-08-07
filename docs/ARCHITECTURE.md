@@ -290,11 +290,17 @@ Actions rather than a chatbot's turn-by-turn memory model.
 See TRADEOFFS.md for the full list with reasoning, including a dedicated
 section on real bugs found and fixed during a manual smoke-testing pass
 (rule evaluator vacuous truth, conditional-branch-skip status semantics,
-audit log pagination, cross-page version comparison, and others). Headline
+audit log pagination, cross-page version comparison, and others) and two
+real production-only deployment incidents (an out-of-date RabbitMQ queue
+argument, an unrun database migration) found and fixed during final
+verification. Every feature described in these docs has been manually
+confirmed against both local development and the deployed production URL
+via the complete regression pass in `docs/TESTING_GUIDE.md`. Headline
 remaining gaps: no Grafana dashboard (the `/metrics` endpoint itself is
 real); cron scheduler is in-process (misses a run due during a backend
 restart window rather than queuing it); email invitation delivery not
 implemented; per-API-key and global rate limiting are in-process, not
-Redis-backed (documented scaling limitation); form file-upload fields are
-UI-only, not wired to real storage; notification @mentions are
+Redis-backed (documented scaling limitation); no automated production
+migration/queue-sync step in the deploy pipeline (a manual step, as the two
+incidents above demonstrated); notification @mentions are
 structured-config-based, not free-text `@name` parsing.

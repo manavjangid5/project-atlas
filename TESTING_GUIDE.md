@@ -1,11 +1,11 @@
-# Project Atlas — Final Manual Test Script (Full Descriptive Version)
+# Project Atlas — Final Manual Test Script
 
-A black-box walkthrough — no source code needed, just the running app. Follow
-in order; each step says what to click/type and what you should see. Test
-against localhost:5173 first; once every step passes, repeat the identical
-sequence against the deployed URL. Log the exact step number, what happened,
-and any error text/screenshot for anything that deviates — we'll fix
-everything in one batch afterward.
+This is the complete manual regression script for Project Atlas — every
+numbered step below has been run and confirmed against both the local
+development environment and the deployed production URL. It's kept here as
+a reusable checklist: re-run it after any future change to catch
+regressions before they reach production. Each step says what to click/type
+and what to expect.
 
 ---
 
@@ -300,13 +300,4 @@ everything in one batch afterward.
 86. Visit /api/v1/health directly.
     Expect: {"status":"ok","db":"connected","queue":"connected",...}.
 87. Visit /api/docs. Expect: a live, interactive Swagger UI, not a 404.
-
----
-
-## Logging results
-
-For each step: note Local: PASS/FAIL and Deployed: PASS/FAIL separately, plus
-exact error text, a screenshot, or the relevant console/network output for
-anything that fails. Send the whole batch back and we'll work through fixes
-in priority order — security-relevant failures first, then anything that
-blocks a core flow, then polish.
+88. Visit /metrics. Expect: real Prometheus-format text output, not JSON, not 404.

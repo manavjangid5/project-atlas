@@ -79,8 +79,14 @@ sustain 100k+ executions in production, the concrete next steps would be:
   AI Prompt node's live preview (`POST /ai/stream-test`, SSE) but not for
   workflow *generation* itself or for a node's output during an actual
   graph run — those remain request/response.
-- **Elasticsearch (or Postgres `pg_trgm`/full-text `tsvector`)** for search —
-  still `ILIKE`-based; unchanged gap.
+- **Search breadth extended; still `ILIKE`-based, not a real search
+  engine.** Now covers workflows, forms, rules, files, members, audit log
+  actions, API key names, organizations, and execution log messages —
+  closing most of what the spec names explicitly (individual form
+  submissions and rule test history remain unindexed, a smaller gap).
+  Still simple substring matching, not Elasticsearch or Postgres
+  `pg_trgm`/`tsvector` — no relevance ranking or fuzzy matching. That
+  upgrade path is unchanged from before.
 - **Shared `packages/database` workspace package** — implemented. Prisma
   schema/client now live in one place, compiled via its own `tsc` build
   step (a real production bug was found and fixed in the process — see
@@ -124,9 +130,12 @@ sustain 100k+ executions in production, the concrete next steps would be:
 - **Mobile PWA support** — still not built.
 - **Second, dev-dedicated GitHub OAuth App** — still not set up; unchanged
   gap (see TRADEOFFS.md).
-- **Form repeating groups** — implemented (repeatable text fields with
-  add/remove). Form **file-upload fields** remain UI-only, not wired to
-  real file storage — a real, still-open gap.
+- **Form repeating groups and file-upload fields** — both implemented.
+  Repeatable text fields support add/remove; **file-upload fields now
+  genuinely upload to R2** (an earlier version accepted a file selection in
+  the UI with no real upload behind it — closed, with regression test
+  coverage confirming the field's stored value becomes a real storage
+  reference, not a raw browser `File` object).
 - **Prometheus metrics** — implemented. `GET /metrics` (outside `/api/v1`,
   no auth — matches standard scrape-endpoint convention) exposes real
   `prom-client` counters and a histogram: total HTTP requests by
@@ -147,20 +156,47 @@ sustain 100k+ executions in production, the concrete next steps would be:
   the graph executor correctly reporting `SUCCESS` (not `PARTIAL`) when a
   conditional branch is legitimately skipped vs. `FAILED`/`PARTIAL` on a
   genuine upstream failure, the dynamic permission model's override-vs-
-  default-matrix fallback, and the SSRF guard's actual IP/protocol
-  blocklist. These were each real bugs caught by manual click-through
-  testing with zero prior automated coverage — now they have it.
+  default-matrix fallback, the SSRF guard's actual IP/protocol blocklist,
+  global search's result composition, and form submission's real R2
+  file-upload path. These were each real bugs or real feature gaps caught
+  by manual click-through testing with zero prior automated coverage — now
+  they have it.
+- **No automated production migration/queue-sync step in CI/CD.** Two real
+  production incidents during final verification (an out-of-date RabbitMQ
+  queue argument, an unrun database migration) both stemmed from the same
+  gap: nothing in the deployment pipeline automatically applies schema
+  migrations or queue-argument changes to production — they require a
+  manual `prisma migrate deploy` / queue-recreation step, which is easy to
+  forget. A production CI/CD pipeline would run migrations as an automated
+  deploy step (Render supports pre-deploy commands) rather than relying on
+  a human remembering to do it.
+- **Auth breaks in Incognito/Private browsing on the deployed
+  environment.** The frontend and backend are separate Render services on
+  different subdomains, making every auth cookie a third-party cookie from
+  the browser's perspective — Chrome blocks these by default in Incognito.
+  Confirmed directly: identical account works normally in a regular Chrome
+  window, fails every time in Incognito. The real fix is architectural —
+  same-origin deployment (backend serving the frontend, or both under one
+  custom root domain with the backend at a subpath) rather than a code
+  patch. Not done here given the free-tier split-service Render setup; see
+  TRADEOFFS.md for the full explanation.
 
 ## What would change first if this became a real product
 
-In rough priority order: (1) move rate limiting (both global and per-API-key)
-and the AI response cache to Redis, since those are the two remaining pieces
-of hidden per-process state that silently break correctness the moment
-there's more than one instance of anything; (2) replace the in-process cron
-scheduler with a persistent one so scheduled runs survive a restart window;
-(3) wire transactional email delivery for org invitations (still just a
-copy/share link today); (4) build a Grafana dashboard against the now-real
-`/metrics` endpoint for actual trend/alerting visibility, since the raw
-scrape endpoint alone doesn't give that; (5) extend Zod validation to file
-routes' non-body fields (e.g. query params) for full input-validation
-symmetry.
+In rough priority order: (1) move to a same-origin deployment topology
+(backend serving the built frontend, or both under one custom root domain)
+so auth cookies become first-party and Incognito/Private browsing works —
+this is arguably the highest-value architectural fix remaining, since it
+affects every user in a specific but common browsing mode; (2) add an
+automated production migration/queue-sync step to the deploy pipeline,
+since manually remembering this caused two real incidents during this
+project's own final verification pass; (3) move rate limiting (both global
+and per-API-key) and the AI response cache to Redis, since those are the
+two remaining pieces of hidden per-process state that silently break
+correctness the moment there's more than one instance of anything;
+(4) replace the in-process cron scheduler with a persistent one so
+scheduled runs survive a restart window; (5) wire transactional email
+delivery for org invitations (still just a copy/share link today);
+(6) build a Grafana dashboard against the now-real `/metrics` endpoint for
+actual trend/alerting visibility, since the raw scrape endpoint alone
+doesn't give that.

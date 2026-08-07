@@ -99,11 +99,21 @@ this was a deliberate security boundary, not a missing feature. A "run any
 SQL" node would reopen exactly the injection/IDOR surface the rest of the
 app was hardened against.
 
-**Form file-upload fields are UI-only.** The form builder lets you add a
-`file`-type field and it renders a file input in the live preview, but
-submissions don't actually upload the file anywhere (no R2 integration for
-form-submitted files, distinct from the standalone Files module which is
-fully real). A genuine gap, not represented as done anywhere else in the docs.
+**Form file-upload fields — was UI-only, now genuinely wired to R2.** The
+form builder's `file`-type field previously rendered a working input with
+no real upload behind it. Submissions with a real file attached now upload
+to Cloudflare R2 (the same storage backend as the standalone Files module)
+and the submission's stored data holds a real `{storageKey, fileName,
+mimeType}` reference, not a raw unhandled browser `File` object. Submission
+without a file attached is unaffected (backward compatible).
+
+**Global search — extended to cover organizations and execution logs, still
+not fully comprehensive.** Originally covered workflows, forms, rules,
+files, and members. Now also covers audit log actions, API key names,
+organizations, and execution log messages — closing most of what the spec
+names explicitly. Not indexed: individual form submissions, rule test
+history, and notification content — a smaller remaining gap, not
+represented as fully done.
 
 **Notification @mentions are structured, not free-text.** A rule's NOTIFY
 action can target a specific user via a `mentionUserId` field in its config,
@@ -111,6 +121,20 @@ which triggers an additional real-time `mention` event to that user. There
 is no `@username` parsing inside free-text notification messages — mentions
 only happen where a feature explicitly wires them up (currently just rule
 actions), not as a general text-parsing capability across the app.
+
+**Schema/queue-argument changes need an explicit manual production sync —
+this bit us twice.** Two real production-only failures occurred during
+final verification, both the same root pattern: a change made locally
+(a Prisma migration adding `cronSchedule`; a RabbitMQ queue argument change
+adding `x-max-priority`) was never actually applied against Render's
+production database/queue, only the local ones. Neither error surfaces
+until the code referencing the new column/argument actually runs in
+production. Fixed by running `npx prisma migrate deploy` against Render's
+external database URL and deleting/recreating the affected RabbitMQ queue.
+Documented here because it's a repeatable gotcha, not a one-off mistake:
+any future schema or queue-argument change needs the same manual
+production-sync step, and there's currently no automated CI/CD step that
+does this for you (a real gap — see SCALABILITY_AND_FUTURE_WORK.md).
 
 **CSRF library version sensitivity.** The installed major version of
 `csrf-csrf` requires an explicit `getTokenFromRequest` function in its
@@ -151,6 +175,28 @@ breaks (Google login still works locally). The alternative — a second,
 dev-only GitHub OAuth App — was noted but not set up, given time constraints;
 trivial to add later.
 
+**Auth relies on third-party cookies — breaks in Incognito/Private
+browsing.** The frontend (`project-atlas-frontend.onrender.com`) and
+backend (`project-atlas-vupz.onrender.com`) are deployed as separate Render
+services on different subdomains. From a browser's perspective, that makes
+them cross-site, and every auth cookie (`accessToken`, `refreshToken`,
+`csrf-token`) is set with `SameSite=None; Secure` to allow this — which is
+exactly the definition of a third-party cookie in that context. Chrome
+blocks third-party cookies by default in Incognito mode (has for some
+time), so login genuinely fails there: a session is issued, but the browser
+refuses to store or send the cookie back, producing repeated `401`s on
+`/auth/me` and `/auth/refresh`. Regular (non-Incognito) Chrome sessions,
+and any browser/profile with default third-party-cookie settings, are
+unaffected — this was confirmed directly (works normally in a regular
+Chrome window, fails identically every time in Incognito on the same
+account). This is a structural consequence of the split-subdomain
+deployment topology, not a fixable code bug: a genuine fix means putting
+frontend and backend on the same origin (e.g. the backend serving the
+built frontend, or both under one custom root domain with the backend at a
+subpath like `/api`) so auth cookies become first-party again. Neither was
+done here, given the free-tier Render setup and timeline — documented
+honestly rather than left for someone to discover by accident.
+
 **`packages/database` extraction — and the bug it surfaced.** Prisma was
 extracted into a shared `packages/database` workspace package consumed by
 both `apps/backend` and `apps/worker`, closing the earlier "two independent
@@ -180,7 +226,7 @@ higher scale or with more than one worker replica.
 
 ## Bugs found during manual smoke testing (and fixed)
 
-A full manual click-through pass (see `docs/FINAL_SMOKE_TEST.md`) surfaced
+A full manual click-through pass (see `docs/TESTING_GUIDE.md`) surfaced
 several real correctness bugs that no automated test had caught — each is
 now fixed and has regression coverage:
 
@@ -246,7 +292,13 @@ reports `SUCCESS`, from a genuine upstream failure, which reports
 precedence over the default role matrix, in both the granting and
 restricting direction), and the SSRF guard (confirms it actually blocks
 localhost, loopback, and the cloud metadata IP, and actually allows a
-genuine public URL through). Integration tests (against a real, ephemeral
+genuine public URL through), global search's result composition (confirms
+organizations and execution logs actually appear in results with correct
+typing, and that sub-2-character queries don't hit the database at all),
+and form submission's real R2 file-upload path (confirms an attached file
+is actually uploaded and the field's stored value becomes a storage
+reference, not a raw/unhandled file — and that submissions without a file
+still work unchanged). Integration tests (against a real, ephemeral
 Postgres in CI) cover cross-tenant access denial (the core multi-tenancy
 guarantee) and refresh-token rotation/reuse-detection revoking an entire
 token family. A CSRF regression test confirms a mutating request without a
@@ -256,16 +308,21 @@ build workflow → save → run → see result). This is intentionally not
 exhaustive line-coverage across every route or every frontend component —
 it targets the pieces where a silent logic or security bug would be
 genuinely hard to notice by manual testing alone. The full manual regression
-script covering every feature (including the ones without automated tests)
-lives in `docs/FINAL_SMOKE_TEST.md` and should be run before any deploy.
+script covering every feature lives in `docs/TESTING_GUIDE.md` — every
+step in it has been run and confirmed against both local and the deployed
+production URL, and it should be re-run after any future change.
 
 ## On verification honesty specifically
 
-Not every feature described across these docs has been independently
-re-confirmed against the live deployed environment as of this writing — see
-the "Verification status" section at the top of DEPLOYMENT.md for a precise
-breakdown of what's confirmed live in production, what's configured but not
-separately retested (e.g. GitHub OAuth), and what's built and verified only
-via local testing pending a final deploy-and-click-through pass (most of the
-AI generation/streaming, priority queue, cron, and dynamic-permission
-features added in the later part of the build).
+The full feature set described across these docs has been manually
+confirmed against both the local development environment and the live
+deployed URL via the complete regression pass in `docs/TESTING_GUIDE.md`
+— see DEPLOYMENT.md's "Verification status" section for specifics,
+including two real production-only infrastructure issues (an out-of-date
+RabbitMQ queue argument, an unrun database migration) that were found and
+fixed during that pass. Two items remain configured-but-not-independently-
+retested rather than fully confirmed: GitHub OAuth specifically (same code
+path as the confirmed-working Google OAuth, but not separately retested)
+and actual inbox delivery of the Resend email node's output (the node
+executes successfully; delivery to an inbox was not checked). Both are
+named plainly rather than implied as done.

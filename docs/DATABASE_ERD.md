@@ -68,6 +68,10 @@ generation steps.
 
 **FormSubmission**
 - `id, formId, data (Json), submittedBy?, createdAt`
+- For a `file`-type field, `data`'s value for that field is a real storage
+  reference `{ storageKey, fileName, mimeType }` pointing at Cloudflare R2
+  (uploaded via the same client as the standalone Files module), not a raw
+  unhandled browser file — form file uploads are genuinely wired end-to-end.
 
 Field definition shape (stored in `fields` Json, not a separate table —
 dynamic schema by design): `{ id, label, type, required?, options?,
