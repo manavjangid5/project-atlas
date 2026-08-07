@@ -21,8 +21,12 @@ a trivial HTTP health server bolted on (`healthServer.ts`) purely to satisfy
 Render's port-binding requirement, while the real RabbitMQ consumer runs in
 the same process. Real cost: free Web Services spin down after 15 min idle,
 so the worker can go to sleep and stop consuming the queue until woken by an
-incoming request — mitigated with an external keep-alive cron ping, but this
-is a genuine limitation worth naming explicitly rather than hiding.
+incoming request — mitigated with a code-based mutual keep-alive between
+backend and worker (in-process `setInterval` ping every 10 minutes, see
+DEPLOYMENT.md). An external cron-based backstop was considered but never
+actually set up, so this mitigation has the honest edge case that if both
+services spin down simultaneously, nothing wakes them until a real request
+arrives — a genuine limitation worth naming explicitly rather than hiding.
 
 **Prisma / TypeScript / Vite / Express-ecosystem version pinning.** Multiple
 times during the build, `pnpm add <package>` (no version specified) resolved
@@ -55,11 +59,67 @@ won't scale gracefully to true full-text relevance ranking or fuzzy matching
 at large data volumes — `pg_trgm`/`tsvector` or a real search service would
 be the production upgrade path (see SCALABILITY_AND_FUTURE_WORK.md).
 
-**Workflow versioning: storage exists, diff/rollback UI does not.** Every
-graph save writes a full `WorkflowVersion` snapshot from day one (no
-retrofitting needed later), but the frontend never got a "compare version A
-vs B" or "roll back to version N" screen. The data model fully supports it —
-this is a UI-only gap, explicitly deferred to keep pace with the timeline.
+**Workflow versioning: diff/rollback UI — was a gap, now built.** Every
+graph save writes a full `WorkflowVersion` snapshot. The frontend now has a
+paginated version list, a two-version diff view (Added/Removed/Modified
+nodes), and one-click restore. Remaining honest limitation: the diff is
+structural (which nodes changed), not a field-by-field config diff within a
+single modified node — if you want to know *exactly* what changed inside one
+node's config, you still have to open both versions' raw graphs.
+
+**Dynamic permission model now covers every mutating/privileged action —
+was a partial-coverage gap, now closed.** `requirePermission(resource,
+action)`, backed by an org-overridable `Permission` table with a sane
+default-matrix fallback, governs create/update/delete/run/submit **and**
+evaluate/restore/share across workflows, forms, rules, files, and feature
+flags. The earlier version left a handful of lower-stakes actions (rule
+evaluate, file restore/share, workflow version restore) on the older static
+`requireTenantRole` check; those were extended to the dynamic model too,
+so there's now exactly one permission mechanism in the codebase, not two.
+
+**Cron-scheduled workflows use an in-process scheduler, not a persistent
+job queue.** `node-cron` jobs are registered in-memory at backend boot and
+re-synced whenever a schedule changes, reading from the `Workflow.cronSchedule`
+column. This is honest, working code — but a run whose scheduled time falls
+*during* a backend restart or Render cold-start window is missed entirely,
+not queued for later execution. A production system would use a durable
+scheduler (e.g. `pg-boss`, or an external cron service hitting the existing
+webhook endpoint) so scheduled runs survive process restarts.
+
+**Per-API-key rate limiting is in-memory, same caveat as the global
+limiter.** `requireApiKey` enforces 60 requests/minute per key via an
+in-process `Map`, which (like the global rate limiter) resets on restart and
+doesn't share state across multiple backend instances. Same Redis-migration
+path applies to both.
+
+**Database Query node is restricted to an explicit table allowlist, not
+arbitrary SQL.** The node only permits reads against `workflows`, `forms`,
+and `files`, always scoped by the executing run's own `organizationId` —
+this was a deliberate security boundary, not a missing feature. A "run any
+SQL" node would reopen exactly the injection/IDOR surface the rest of the
+app was hardened against.
+
+**Form file-upload fields are UI-only.** The form builder lets you add a
+`file`-type field and it renders a file input in the live preview, but
+submissions don't actually upload the file anywhere (no R2 integration for
+form-submitted files, distinct from the standalone Files module which is
+fully real). A genuine gap, not represented as done anywhere else in the docs.
+
+**Notification @mentions are structured, not free-text.** A rule's NOTIFY
+action can target a specific user via a `mentionUserId` field in its config,
+which triggers an additional real-time `mention` event to that user. There
+is no `@username` parsing inside free-text notification messages — mentions
+only happen where a feature explicitly wires them up (currently just rule
+actions), not as a general text-parsing capability across the app.
+
+**CSRF library version sensitivity.** The installed major version of
+`csrf-csrf` requires an explicit `getTokenFromRequest` function in its
+config — without it, the library silently fails to read the `x-csrf-token`
+header correctly even when the client sends a matching, freshly-issued
+token, producing a confusing "valid-looking token, still 403" failure mode
+that took real debugging time to isolate. Documented here since it's a
+non-obvious library-API-shape trap, not a logic bug in this codebase's own
+code.
 
 **Feature flags are platform-level, not per-organization tables.** A flag's
 per-org behavior is controlled by `targetOrgIds[]` and a deterministic
@@ -118,14 +178,94 @@ restart/redeploy and isn't shared across multiple worker instances. Fine at
 current scale; Redis would be the correct shared-cache backing store at
 higher scale or with more than one worker replica.
 
+## Bugs found during manual smoke testing (and fixed)
+
+A full manual click-through pass (see `docs/FINAL_SMOKE_TEST.md`) surfaced
+several real correctness bugs that no automated test had caught — each is
+now fixed and has regression coverage:
+
+- **Rule evaluator vacuous truth.** JavaScript's `[].every(...)` returns
+  `true` on an empty array, so an empty AND/OR condition group silently
+  matched *any* input. Fixed to explicitly return `false` for empty groups.
+- **Conditional branch skip counted as a failure.** A workflow run where a
+  Conditional node correctly took one branch and skipped the other was
+  reported as `PARTIAL`, implying something went wrong — nothing did. Fixed
+  by distinguishing "skipped because the branch wasn't taken" from
+  "skipped because an upstream node genuinely failed"; only the latter
+  affects final run status.
+- **Open node config panel didn't reflect undo/redo.** The panel captured
+  a one-time snapshot of the clicked node instead of deriving it live from
+  current canvas state, so undoing a node deletion correctly restored the
+  node on the canvas but the (already-open) panel kept showing stale data.
+  Fixed by deriving the displayed node from a live lookup by ID each render.
+- **Audit log pagination was hardcoded to page 1.** The fetch call ignored
+  the `page` state entirely; clicking Next/Previous changed the UI's page
+  number but always requested page 1 from the API. Fixed.
+- **Cross-page version comparison was impossible.** The version diff
+  feature stored only selected *IDs*, which fell out of scope once you
+  paginated away from the page they were fetched on. Fixed by storing the
+  full selected version objects instead, so a selection made on one page
+  survives navigating to another.
+- **Form "Show only if" required an exact string match, and didn't apply
+  to the first field.** Simplified to presence/truthy-based visibility
+  (show once the referenced field has any value) per actual usage
+  need, rather than requiring the field's value to equal a specific
+  hardcoded comparison string.
+- **Member role-change silently did nothing.** The frontend's
+  `updateMemberRole` call was missing the `:orgId` URL segment the backend
+  route actually requires, so it was hitting a route that doesn't exist.
+  Blocked with no on-screen error until this call was traced.
+- **Rule "Test" button could silently evaluate stale, unsaved data.**
+  Editing a rule's conditions and clicking Test (without a separate Save
+  click first) tested whatever was last actually persisted in the
+  database, not what was on screen — confusing given there's no visible
+  indicator of unsaved changes. Fixed by making Test always save current
+  edits before evaluating.
+- **A blocked workflow run (e.g. by a disabled feature flag) failed
+  silently.** The `403` was visible in the browser console/network tab but
+  nothing appeared on screen. Fixed to show the real error message via an
+  alert.
+
+These are listed here deliberately, not swept into a changelog, because
+they're exactly the class of bug an external review would expect a project
+at this stage to have already caught with tests — see "Testing scope" below
+for what regression coverage was added as a direct result.
+
 ## Testing scope
 
-Unit tests cover the highest-value, highest-bug-risk logic specifically: the
-rule evaluator (recursive AND/OR correctness), JWT/refresh-token utilities
-(sign/verify/tamper-detection/hash-consistency), and the graph executor
-(parallel execution, downstream-skip-on-failure). This is intentionally not
-exhaustive line-coverage across every file — it targets the pieces where a
-silent logic bug would be genuinely hard to notice by manual testing alone.
-One Playwright e2e test covers the single most important user journey
-end-to-end (login → build workflow → save → run → see result), rather than a
-broad but shallow suite across every page.
+Unit tests cover the highest-value, highest-bug-risk logic: the rule
+evaluator (recursive AND/OR correctness, the empty-group vacuous-truth
+guard, dot-path field resolution against nested JSON, and a full nested
+AND/OR tree against realistic recruiter-style data — all real bugs found
+and fixed during manual testing, listed above), JWT/refresh-token utilities
+(sign/verify/tamper-detection/hash-consistency), the graph executor
+(parallel execution, downstream-skip-on-failure, and — specifically —
+correctly distinguishing a legitimately-skipped conditional branch, which
+reports `SUCCESS`, from a genuine upstream failure, which reports
+`FAILED`/`PARTIAL`), the dynamic permission model (org-override rows taking
+precedence over the default role matrix, in both the granting and
+restricting direction), and the SSRF guard (confirms it actually blocks
+localhost, loopback, and the cloud metadata IP, and actually allows a
+genuine public URL through). Integration tests (against a real, ephemeral
+Postgres in CI) cover cross-tenant access denial (the core multi-tenancy
+guarantee) and refresh-token rotation/reuse-detection revoking an entire
+token family. A CSRF regression test confirms a mutating request without a
+token is rejected. One Playwright e2e
+test covers the single most important user journey end-to-end (login →
+build workflow → save → run → see result). This is intentionally not
+exhaustive line-coverage across every route or every frontend component —
+it targets the pieces where a silent logic or security bug would be
+genuinely hard to notice by manual testing alone. The full manual regression
+script covering every feature (including the ones without automated tests)
+lives in `docs/FINAL_SMOKE_TEST.md` and should be run before any deploy.
+
+## On verification honesty specifically
+
+Not every feature described across these docs has been independently
+re-confirmed against the live deployed environment as of this writing — see
+the "Verification status" section at the top of DEPLOYMENT.md for a precise
+breakdown of what's confirmed live in production, what's configured but not
+separately retested (e.g. GitHub OAuth), and what's built and verified only
+via local testing pending a final deploy-and-click-through pass (most of the
+AI generation/streaming, priority queue, cron, and dynamic-permission
+features added in the later part of the build).

@@ -34,6 +34,7 @@ import swaggerUi from "swagger-ui-express";
 import openapiSpec from "./openapi.json";
 import { loadScheduledWorkflows } from "./infrastructure/scheduler/cronScheduler";
 import aiWorkflowRouter from "./interfaces/http/routes/aiWorkflow";
+import { register, httpRequestCounter, httpRequestDuration } from "./infrastructure/metrics/metrics";
 
 const app = express();
 app.set("trust proxy", 1);
@@ -62,29 +63,46 @@ app.use(morgan("dev"));
 // 4. Global rate limit
 app.use("/api/v1", rateLimit({ windowMs: 15 * 60 * 1000, limit: 300, standardHeaders: true, legacyHeaders: false }));
 
-// 5. CSRF token issuance - public, must exist before protection is enforced
+// 5. Metrics - placed before CSRF so a scraper never needs to touch
+// CSRF logic at all (harmless either way since GETs are exempt, but
+// this keeps monitoring fully decoupled from the auth/CSRF pipeline).
+app.use((req, res, next) => {
+  const end = httpRequestDuration.startTimer();
+  res.on("finish", () => {
+    const route = req.route?.path || req.path;
+    httpRequestCounter.inc({ method: req.method, route, status: res.statusCode });
+    end({ method: req.method, route });
+  });
+  next();
+});
+app.get("/metrics", async (req, res) => {
+  res.set("Content-Type", register.contentType);
+  res.end(await register.metrics());
+});
+
+// 6. CSRF token issuance - public, must exist before protection is enforced
 app.get("/api/v1/csrf-token", (req, res) => {
   res.json({ csrfToken: generateCsrfToken(req, res) });
 });
 
-// 6. CSRF protection - runs BEFORE every router, on every mutating request, except the auth entry points that can't have a token yet.
+// 7. CSRF protection - runs BEFORE every router, on every mutating request, except the auth entry points that can't have a token yet.
 app.use((req, res, next) => {
   const exempt =
-  req.method === "GET" ||
-  ["/api/v1/auth/login", "/api/v1/auth/register", "/api/v1/auth/refresh", "/api/v1/auth/logout"].includes(req.path) ||
-  req.path.startsWith("/api/v1/auth/google") ||
-  req.path.startsWith("/api/v1/auth/github") ||
-  req.path.startsWith("/api/v1/internal") ||
-  req.path.startsWith("/api/v1/webhooks") ||
-  req.path.startsWith("/api/v1/ai/stream-test") ||
-  req.path.startsWith("/api/v1/public");
+    req.method === "GET" ||
+    ["/api/v1/auth/login", "/api/v1/auth/register", "/api/v1/auth/refresh", "/api/v1/auth/logout"].includes(req.path) ||
+    req.path.startsWith("/api/v1/auth/google") ||
+    req.path.startsWith("/api/v1/auth/github") ||
+    req.path.startsWith("/api/v1/internal") ||
+    req.path.startsWith("/api/v1/webhooks") ||
+    req.path.startsWith("/api/v1/ai/stream-test") ||
+    req.path.startsWith("/api/v1/public");
   if (exempt) return next();
   return doubleCsrfProtection(req, res, next);
 });
 
 app.use(passport.initialize());
 
-// 7. Routers - mounted AFTER CSRF protection is active
+// 8. Routers - mounted AFTER CSRF protection is active
 app.use("/api/v1", healthRouter);
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1", organizationsRouter);
@@ -104,10 +122,10 @@ app.use("/api/v1", publicApiRouter);
 app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(openapiSpec));
 app.use("/api/v1", aiWorkflowRouter);
 
-// 8. 404 for anything unmatched
+// 9. 404 for anything unmatched
 app.use((req, res) => res.status(404).json({ error: "Not found" }));
 
-// 9. Error handler - MUST be last, 4-arg signature
+// 10. Error handler - MUST be last, 4-arg signature
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 4000;

@@ -65,7 +65,7 @@ router.get("/workflows/:id/versions", requireAuth, requireTenant, async (req: Te
   const result = await workflowService.listVersions(req.tenant!.organizationId, paramStr(req.params.id), page, 8);
   res.json(result);
 });
-router.post("/workflows/:id/versions/:versionId/restore", requireAuth, requireTenant, requirePermission("workflow", "update"), async (req: TenantRequest, res) => {
+router.post("/workflows/:id/versions/:versionId/restore", requireAuth, requireTenant, requirePermission("workflow", "restoreVersion"), async (req: TenantRequest, res) => {
   const wf = await workflowService.restoreVersion(
     req.tenant!.organizationId,
     paramStr(req.params.id),

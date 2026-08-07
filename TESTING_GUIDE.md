@@ -1,227 +1,312 @@
-# Project Atlas — Manual Test Script
+# Project Atlas — Final Manual Test Script (Full Descriptive Version)
 
 A black-box walkthrough — no source code needed, just the running app. Follow
-in order; each step says what to click/type and what you should see. If
-anything deviates, that's a bug to fix on the spot.
-
-Use the live URL, or `localhost:5173` for local testing.
+in order; each step says what to click/type and what you should see. Test
+against localhost:5173 first; once every step passes, repeat the identical
+sequence against the deployed URL. Log the exact step number, what happened,
+and any error text/screenshot for anything that deviates — we'll fix
+everything in one batch afterward.
 
 ---
 
 ## 1. Registration & first login
 
-1. Go to `/register`.
-2. Fill name, a fresh email, password (must be 8+ chars, 1 uppercase, 1 number
-   — try a weak password first to confirm the validation error shows, then
-   use a valid one).
-3. Submit.
-   **Expect:** redirected straight into the app, landing on an "Welcome to
-   Atlas — create an organization" onboarding screen (not a blank/broken page).
-4. Type an organization name → **Create organization**.
-   **Expect:** lands on the main dashboard, sidebar visible, organization
+1. Go to /register.
+2. Try a weak password first (e.g. "abc") and submit.
+   Expect: a clear validation error shown on screen — not a server crash
+   or blank page.
+3. Fill in a fresh email and a valid password (8+ chars, 1 uppercase, 1
+   number), submit.
+   Expect: redirected straight into the app, landing on a "Welcome to
+   Atlas — create an organization" onboarding screen.
+4. Type an organization name -> Create organization.
+   Expect: lands on the main dashboard, sidebar visible, organization
    name shown in the top-left dropdown, role shown as "OWNER".
 
-## 2. Session / auth guard behavior
+## 2. Session & auth guard behavior
 
-5. Manually edit the URL to `/login` while logged in.
-   **Expect:** immediately bounced back to `/dashboard` — the login form
-   should never show while authenticated.
-6. Click **Sign out** (bottom of sidebar).
-   **Expect:** redirected to `/login`.
-7. Manually edit the URL to `/dashboard/workflows` while logged out.
-   **Expect:** immediately bounced to `/login` — dashboard content should
-   never flash or be visible.
+5. Manually edit the URL to /login while logged in.
+   Expect: immediately bounced back to /dashboard — the login form
+   never shows while authenticated.
+6. Click Sign out (top bar).
+   Expect: redirected to /login and stays there — does not bounce
+   back to the dashboard.
+7. Manually edit the URL to /dashboard/workflows while logged out.
+   Expect: immediately bounced to /login — dashboard content never
+   flashes or is visible.
 8. Log back in with the account from step 3.
 
-## 3. OAuth login (optional, if credentials are configured)
+## 3. OAuth login
 
-9. Log out, then on the login page click **Continue with Google**.
-   **Expect:** Google consent screen → redirected back into the app, logged
-   in. Repeat with **Continue with GitHub** if configured.
+9. Log out, then on the login page click Continue with Google.
+   Expect: Google consent screen -> redirected back into the app, logged
+   in.
+10. Log out again, click Continue with GitHub.
+    Expect: GitHub consent screen -> redirected back into the app,
+    logged in. (This specific flow has not been independently re-confirmed
+    since an earlier fix — worth watching closely.)
 
-## 4. Organization — Members
+## 4. Theme toggle
 
-10. Sidebar → **Members**. **Expect:** your own account listed with role
-    OWNER.
-11. Invite a member: enter a second email address, pick role "DEVELOPER" →
-    **Invite**. **Expect:** an invite link/token shown on screen (no email is
-    actually sent — this is a documented gap, see TRADEOFFS.md).
-12. Try changing your own role or removing yourself — **Expect:** the OWNER
-    row should not offer a role dropdown or remove button (you can't demote
-    or remove the sole owner from the UI).
+11. Click the theme toggle icon in the top bar.
+    Expect: the entire UI switches to a light theme instantly — no
+    unreadable text, no leftover dark-only elements.
+12. Refresh the page.
+    Expect: your theme choice persists (doesn't reset to dark).
+13. Toggle back to dark for the rest of testing.
 
-## 5. Organization — Settings
+## 5. Organization — Members & Settings
 
-13. Sidebar → **Settings**. Change the organization name → **Save**.
-    **Expect:** name updates immediately in the sidebar dropdown too.
+14. Sidebar -> Members. Expect: your own account listed with role OWNER.
+15. Invite a second email as DEVELOPER -> Invite.
+    Expect: an invite link/token shown on screen (no email is sent —
+    documented gap).
+16. Sidebar -> Settings -> change the organization name -> Save.
+    Expect: name updates immediately in the sidebar dropdown too.
 
 ## 6. Workflows — building and running a real pipeline
 
-14. Sidebar → **Workflows** → type a name (e.g. "Interview Test Flow") →
-    **Create**. **Expect:** opens directly into the canvas.
-15. Drag **HTTP Request** from the left palette onto the canvas.
-16. Click the new node → a config panel opens on the right.
-    - Method: `GET`
-    - URL: `https://jsonplaceholder.typicode.com/todos/1`
-    Click **Done** (or click elsewhere) to close the panel.
-17. Drag an **AI Prompt** node onto the canvas, to the right of the HTTP node.
-18. Connect them: drag from the small dot on the right edge of the HTTP node
-    to the small dot on the left edge of the AI Prompt node.
-19. Click the AI Prompt node → in the Prompt field type:
-    `Write a one-sentence joke about todo lists.`
-20. Click **Save** (top toolbar). **Expect:** no error, button returns to
-    normal state.
-21. Click **Run**. **Expect:** the Run History panel opens on the right
-    automatically, showing a new entry with status `PENDING` → `RUNNING` →
-    (within a few seconds) `SUCCESS`.
-22. Click that run row to expand it. **Expect:** two log entries — the HTTP
-    node showing real JSON from jsonplaceholder, and the AI node showing a
-    real Gemini-generated joke (not a fallback/error message).
-23. Test node deletion: hover the HTTP node, click the small red ✕ badge that
-    appears top-right of the card. **Expect:** node and its connected edge
-    disappear.
-24. Undo that by re-adding a node, then test the other delete method: click a
-    node, click **Delete** in the side panel. **Expect:** same result.
+17. Sidebar -> Workflows -> name it "Smoke Test Flow" -> Create.
+    Expect: opens directly into the canvas.
+18. Drag HTTP Request onto the canvas. Click it -> configure:
+    - Method: GET
+    - URL: https://jsonplaceholder.typicode.com/todos/1
+19. Drag AI Prompt onto the canvas, to the right of the HTTP node.
+    Connect them (drag from the HTTP node's right dot to the AI node's left
+    dot).
+20. Click the AI Prompt node. Expect: the panel shows this node's real
+    ID (e.g. ID: node-1712...) and a hint on how to reference an upstream
+    node's output.
+21. In the Prompt field, type: "Summarize this in one sentence:
+    {the-http-node's-real-id_output}" (use the actual ID shown for the HTTP
+    node, not a placeholder like node-1).
+22. Click "Preview response".
+    Expect: text streams in visibly, chunk by chunk with a blinking
+    cursor — not one big block appearing after a delay.
+23. Click Save. Expect: no error.
+24. Click Run. Expect: Run History panel opens automatically,
+    showing PENDING -> RUNNING -> SUCCESS within a few seconds.
+25. Expand the run. Expect: both nodes show real output — the HTTP
+    node's JSON and the AI node's actual generated summary (not the
+    unresolved literal text {...output}).
+26. Test keyboard shortcuts: make a small edit, press Ctrl/Cmd+S — same
+    effect as clicking Save. Press Ctrl/Cmd+Enter — same effect as
+    clicking Run.
+27. Make another edit (e.g. move a node), press Ctrl/Cmd+Z.
+    Expect: the edit undoes. Press Ctrl/Cmd+Shift+Z.
+    Expect: it redoes.
+28. Hover the HTTP node, click the small red X badge.
+    Expect: node and its connected edge disappear.
+29. Press Ctrl/Cmd+Z.
+    Expect: the deleted node reappears exactly as it was.
+30. Click "Back to workflows", then click the same workflow card again.
+    Expect: the workflow opens showing its current, fully up-to-date
+    state — no stale/missing nodes requiring a page reload to show up.
 
 ## 7. Workflows — failure & retry behavior
 
-25. Create a second workflow. Add an HTTP Request node with a deliberately
-    bad URL, e.g. `https://this-domain-does-not-exist-xyz123.com`.
-26. Save, Run. **Expect:** Run History shows the node going through multiple
-    `RETRYING` log entries (exponential backoff) before finally settling on
-    `FAILED`, and the overall run status is `FAILED` (or `PARTIAL` if other
-    nodes existed and succeeded).
+31. Create a second workflow. Add an HTTP Request node with a deliberately
+    bad URL (https://this-domain-does-not-exist-xyz123.com).
+32. Save, Run.
+    Expect: Run History shows multiple RETRYING entries (exponential
+    backoff) before settling on FAILED.
 
-## 8. Forms
+## 8. Conditional branching (verify it genuinely branches)
 
-27. Sidebar → **Forms** → create one, name it "Test Intake Form".
-28. Add three fields:
-    - Text field, label "Full Name", mark **Required**.
-    - Checkbox field, label "Has a pet".
-    - Text field, label "Pet name" → set **Show only if** = the checkbox
-      field, equals `true`.
-29. **Expect (live preview, right side):** the "Pet name" field is hidden
-    until you tick the checkbox in the preview panel, then appears instantly.
-30. Click **Save**.
+33. New workflow. Add a Conditional node (field: test, operator:
+    equals, value: yes). Add two AI Prompt nodes downstream — one
+    connected from the Conditional's true handle, one from its false
+    handle — with clearly different prompts so you can tell which ran (e.g.
+    "list synonyms for yes" vs "list synonyms for no").
+34. Save, Run (default config won't match "yes").
+    Expect: only the false-branch node executes and shows SUCCESS;
+    the true-branch node shows SKIPPED in Run History — not silently
+    executed regardless.
 
-## 9. Rules
+## 9. New node types
 
-31. Sidebar → **Rules** → create one, name it "Senior India Hire".
-32. Build conditions: default group is AND. Add condition `field: location,
-    operator: equals, value: India`. Add a second condition `field:
-    experience, operator: greaterThan, value: 5`.
-33. Set Action → "Send notification" → message "Escalate to hiring manager".
-34. Click **Save**.
-35. Scroll to the **Test** panel → paste:
-    ```
-    { "location": "India", "experience": 7 }
-    ```
-    → **Run test**. **Expect:** "✓ Matched — action would fire".
-36. Change the JSON to `{ "location": "India", "experience": 2 }` → **Run
-    test** again. **Expect:** "✗ Did not match".
-37. Optional deeper test: click **+ Nested group** inside the existing group,
-    set it to OR, add two more conditions inside — confirm the test panel
-    still evaluates correctly against the new nested logic.
+35. Add a GitHub node: owner: facebook, repo: react, action:
+    recent_commits. Run it standalone.
+    Expect: SUCCESS with real commit data.
+36. Add a Switch, an Email (send "to" your own Resend signup
+    address), a Loop, and a Database Query node (table: workflows,
+    limit: 5) to a test workflow. Configure each minimally and run.
+    Expect: each executes to either SUCCESS or a clear, sensible
+    FAILED with a readable error message — never an unhandled crash that
+    takes down the whole run.
 
-## 10. Files
+## 10. AI workflow generation & suggestions
 
-38. Sidebar → **Files** → drag a small image or PDF onto the drop zone (or
-    click to browse).
-    **Expect:** appears in the list below with correct file name, size, and
-    "v1".
-39. Click **Download** on that file. **Expect:** opens/downloads the actual
-    file in a new tab.
-40. Click **Share**. **Expect:** a modal shows a share URL with a Copy
-    button.
-41. Open that share URL in a **new incognito/private window** (simulating a
-    non-logged-in recipient). **Expect:** shows the file name and a working
-    Download button, with no login prompt.
-42. Back in the Files tab, click **Delete** on the file → confirm.
-    **Expect:** disappears from the list (soft-deleted, not gone from
-    storage).
+37. Workflows list -> "Generate with AI" -> type: "Fetch a todo from
+    JSONPlaceholder and summarize it with AI" -> Generate.
+    Expect: button shows "Generating…" then lands you directly in a new
+    canvas with a real 2-node graph already populated (HTTP + AI Prompt).
+38. Save, Run.
+    Expect: SUCCESS (this specific instruction should generate a
+    working, real URL).
+39. On any workflow, click "Suggest next".
+    Expect: button shows "Thinking…", disables, then a row of
+    suggestion chips appears below the toolbar.
+40. Click one of the chips.
+    Expect: a new, pre-configured node drops onto the canvas.
 
-## 11. API Keys
+## 11. Webhook trigger
 
-43. Sidebar → **API Keys** → name a key "Interview Test Key" → **Generate
-    Key**.
-    **Expect:** the raw key is shown once in a highlighted box with a Copy
-    button, and a note that it won't be shown again.
-44. Refresh the page. **Expect:** the key is now listed only by its prefix
-    (e.g. `atlas_ab12cd34`) — the full raw value is never shown again.
-45. Click **Revoke** on the key → confirm. **Expect:** status changes to
-    "Revoked".
+41. Copy the webhook URL shown in the workflow toolbar.
+42. In Postman, POST to that exact URL with any JSON body.
+    Expect: 202 response, and a new run appears in that workflow's
+    Run History — triggered externally, not via the Run button.
 
-## 12. Feature Flags
+## 12. Cron scheduling
 
-46. Sidebar → **Feature Flags** → create one with key `test_flag`,
-    description "Interview test flag".
-47. Drag its rollout slider to 50%. **Expect:** the value updates live next
-    to the slider.
-48. Toggle "Globally enabled" on. **Expect:** the rollout slider disappears
-    (global on/off supersedes percentage rollout).
+43. Via Postman (with your session cookies from logging in through the
+    browser): PATCH /api/v1/workflows/:id/schedule with body
+    { "cronSchedule": "*/2 * * * *" } (every 2 minutes) for a simple
+    test workflow.
+44. Wait 2-3 minutes.
+    Expect: a new run appears automatically in Run History, with no
+    manual trigger.
 
-## 13. Audit Log
+## 13. Version history & diff
 
-49. Sidebar → **Audit Log**. **Expect:** a timeline showing entries for
-    everything you just did — your login, the workflow saves/runs, the rule
-    update, the file upload — each tagged with a colored action label and
-    timestamp.
+45. Save a workflow's graph 3-4 times, making a small change each time
+    (add/remove a node between saves).
+46. Click Versions.
+    Expect: a paginated list, newest first, no page-cutoff or broken
+    scrollbar.
+47. Check two version checkboxes -> click Compare.
+    Expect: a diff modal accurately shows Added / Removed / Modified
+    nodes.
+48. Click Restore on an older version, confirm.
+    Expect: the graph reverts, and a brand-new version is created from
+    the restore (not overwriting history).
 
-## 14. Analytics
+## 14. Forms — including repeatable fields
 
-50. Sidebar → **Analytics**. **Expect:**
-    - Stat cards showing non-zero "Total Runs" and a success-rate percentage
-      that reflects the successful + failed runs from steps 6-7.
-    - A bar chart of daily executions with today showing at least 2 runs.
-    - A pie chart of node usage showing `http_request` and `ai_prompt`
-      (and possibly others) proportionally.
-    - "Most Active Users" showing your account with a non-zero action count.
+49. Sidebar -> Forms -> create one, name it "Smoke Test Form".
+50. Add: a required text field ("Full Name"), a checkbox ("Has a pet"), a
+    text field with "Show only if" tied to that checkbox, and a
+    repeatable text field ("Skills").
+51. In the live preview: toggle the checkbox -> the conditional field
+    appears/disappears correctly. Click "+ Add another" on the repeatable
+    field -> a second input appears; remove it -> it disappears.
+    Expect: no fields overflow their container, no layout breaking.
+52. Save.
 
-## 15. Global search
+## 15. Rules — nested logic with real (nested) data
 
-51. Click the search bar at the top → type part of your workflow's name
-    (e.g. "Interview"). **Expect:** a dropdown appears within ~1 second
-    showing matching workflows (and forms/rules/files if their names also
-    match), each with a type icon and label. Clicking a result navigates to
-    the relevant tab.
+53. Sidebar -> Rules -> create one, name it "Senior India Hire".
+54. Build a nested condition using dot-path field names matching real
+    nested JSON, e.g.:
+    - candidate.location equals India
+    - candidate.experience greaterThan 2
+    (both inside an AND group)
+55. Set Action -> NOTIFY, message "Escalate to hiring manager".
+56. Save. In the Test panel, paste:
+    { "candidate": { "location": "India", "experience": 3 } }
+    -> Run test. Expect: "Matched".
+57. Change experience to 1 -> Run test again.
+    Expect: "Did not match".
+58. Create/use a form whose submission would satisfy this same rule, submit
+    it for real. Expect: a real notification appears in the bell —
+    confirms the rule action fires on an actual submission, not just in the
+    isolated test panel.
 
-## 16. Notifications
+## 16. Files
 
-52. Click the bell icon (top right). **Expect:** a dropdown with recent
-    notifications — "Workflow started" / "Workflow finished with issues"
-    entries from your earlier test runs, each with a relative timestamp.
-53. Trigger a fresh workflow run (repeat step 21 on any workflow) while
-    **keeping the notification dropdown open**. **Expect:** a new
-    notification appears in the list live, with no page refresh, within a
-    couple seconds of the run starting and again when it finishes.
-54. Click **Mark all read**. **Expect:** the unread badge on the bell icon
-    clears.
+59. Sidebar -> Files -> upload a small file.
+    Expect: appears with correct name, size, "v1".
+60. Download it. Expect: opens/downloads correctly.
+61. Share it -> open the link in an incognito window.
+    Expect: works, no login required.
+62. Delete it. Expect: disappears from the list.
 
-## 17. Multi-tenant isolation (important one to actually verify, not just trust)
+## 17. API Keys & public API
 
-55. Create a **second** organization from the org dropdown (if there's no
-    direct "create new org" option visible in the dropdown, register a
-    second test account entirely and create an org there instead).
-56. Confirm the workflows/forms/rules/files created in step 6-10 are **not**
-    visible under this second organization — each org's data should be
-    completely isolated.
-57. Switch back to the first organization via the dropdown. **Expect:**
-    everything from steps 6-14 reappears exactly as left.
+63. Sidebar -> API Keys -> generate one named "Smoke Test Key".
+    Expect: raw key shown once, with a copy button and a warning it
+    won't be shown again.
+64. Refresh the page. Expect: only the prefix is shown from now on.
+65. In Postman: GET /api/v1/public/workflows with header X-API-Key:
+    <raw key>. Expect: 200 with your workflows, no cookies needed.
+66. Send 60+ rapid requests with the same key within a minute.
+    Expect: eventually a 429 response (per-key rate limit).
+67. Revoke the key, repeat the API call. Expect: 401.
 
-## 18. Role enforcement (if a second test member account is available)
+## 18. Feature flags — real gating, not decorative
 
-58. Using the invite link from step 11, accept the invitation with a second
-    account, logging in as the invited "DEVELOPER" role member.
-59. As that Developer, try to access **Settings** or attempt a role change on
-    **Members**. **Expect:** either the controls are hidden, or the API
-    correctly rejects the action with a 403 if attempted directly.
+68. Sidebar -> Feature Flags -> create ai_node_enabled, toggle
+    "Globally enabled" off.
+69. Try running any workflow containing an AI Prompt node.
+    Expect: blocked with a clear 403 error specifically about the
+    flag, not a generic failure.
+70. Toggle it back on. Expect: AI workflows run normally again.
+
+## 19. Audit log & analytics
+
+71. Sidebar -> Audit Log. Expect: real entries for your logins,
+    workflow saves/runs, rule updates, file uploads — each with a real
+    timestamp and a colored action label.
+72. Sidebar -> Analytics. Expect: stat cards, a 14-day execution
+    chart, and a node-usage pie chart all showing real, non-zero data
+    matching your test activity — nothing mocked or static.
+
+## 20. Search & notifications
+
+73. Use the top search bar, type part of a workflow/form/rule/file name.
+    Expect: a dropdown with matching results within ~1 second, correct
+    type icons, clicking one navigates correctly.
+74. Trigger a workflow run while keeping the notification bell dropdown
+    open. Expect: a new notification appears live, no refresh needed.
+75. Trigger two runs of the same workflow close together.
+    Expect: they collapse into a single grouped notification entry
+    rather than showing as two fully separate rows.
+
+## 21. Multi-tenant isolation (don't skip — verify, don't assume)
+
+76. Create a second organization from the sidebar dropdown ("+ Create new
+    organization").
+77. Confirm none of the workflows/forms/rules/files from your first org
+    appear under this second one.
+78. Switch back to the first org. Expect: everything reappears exactly
+    as you left it.
+
+## 22. Role enforcement
+
+79. Using the invite link from step 15, accept it with a second test
+    account (logging in as the DEVELOPER).
+80. As that Developer, try to access Settings or change another
+    member's role. Expect: either the controls are hidden, or the API
+    correctly rejects with 403.
+81. As that Developer, try creating and running a workflow.
+    Expect: allowed (matches the dynamic permission matrix).
+
+## 23. Security spot-checks (don't skip these either)
+
+82. While logged into org A, use DevTools to replay a request but manually
+    change the X-Organization-Id header to org B's real ID.
+    Expect: 403.
+83. In Postman, POST /api/v1/internal/notify with no X-Internal-Secret
+    header. Expect: 401.
+84. In Postman, POST to any mutating route (e.g. create workflow) with no
+    prior /csrf-token fetch and no x-csrf-token header.
+    Expect: 403.
+85. Try an HTTP node pointed at http://169.254.169.254/ or
+    http://localhost:4000/. Expect: blocked by the SSRF guard, node
+    fails cleanly, doesn't actually reach that address.
+
+## 24. Health & ops
+
+86. Visit /api/v1/health directly.
+    Expect: {"status":"ok","db":"connected","queue":"connected",...}.
+87. Visit /api/docs. Expect: a live, interactive Swagger UI, not a 404.
 
 ---
 
-## If something breaks during this walkthrough
+## Logging results
 
-Note exactly: which numbered step, what you clicked/typed, what you expected
-vs. what actually happened, and any red error text in the browser console
-(F12 → Console tab) or a failed request in the Network tab. That's everything
-needed to diagnose and fix it immediately, same as every other issue we've
-resolved throughout this build.
+For each step: note Local: PASS/FAIL and Deployed: PASS/FAIL separately, plus
+exact error text, a screenshot, or the relevant console/network output for
+anything that fails. Send the whole batch back and we'll work through fixes
+in priority order — security-relevant failures first, then anything that
+blocks a core flow, then polish.

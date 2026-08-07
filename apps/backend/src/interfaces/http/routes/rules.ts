@@ -2,6 +2,9 @@ import { Router } from "express";
 import { requireAuth } from "../middleware/auth";
 import { requireTenant, TenantRequest, requireTenantRole, requirePermission} from "../middleware/tenant";
 import * as ruleService from "../../../application/ruleService";
+import { validateBody } from "../middleware/validate";
+import { createRuleSchema, updateRuleSchema } from "../../../domain/validationSchemas";
+
 
 const router = Router();
 
@@ -18,12 +21,12 @@ router.get("/rules/:id", requireAuth, requireTenant, async (req: TenantRequest, 
   res.json(rule);
 });
 
-router.post("/rules", requireAuth, requireTenant, requirePermission("rule", "create"), async (req: TenantRequest, res) => {
+router.post("/rules", requireAuth, requireTenant, requirePermission("rule", "create"), validateBody(createRuleSchema), async (req: TenantRequest, res) => {
   const rule = await ruleService.createRule(req.tenant!.organizationId, req.body.name);
   res.status(201).json(rule);
 });
 
-router.patch("/rules/:id", requireAuth, requireTenant, requirePermission("rule", "update"), async (req: TenantRequest, res) => {
+router.patch("/rules/:id", requireAuth, requireTenant, requirePermission("rule", "update"), validateBody(updateRuleSchema), async (req: TenantRequest, res) => {
   const rule = await ruleService.updateRule(req.tenant!.organizationId, paramStr(req.params.id), req.body);
   res.json(rule);
 });
@@ -33,7 +36,7 @@ router.delete("/rules/:id", requireAuth, requireTenant, requirePermission("rule"
   res.status(204).send();
 });
 
-router.post("/rules/:id/evaluate", requireAuth, requireTenant, requirePermission("rule", "update"), async (req: TenantRequest, res) => {
+router.post("/rules/:id/evaluate", requireAuth, requireTenant, requirePermission("rule", "evaluate"), async (req: TenantRequest, res) => {
   const result = await ruleService.evaluateRule(req.tenant!.organizationId, paramStr(req.params.id), req.body.data);
   res.json(result);
 });

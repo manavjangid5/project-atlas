@@ -2,6 +2,9 @@ import { Router } from "express";
 import { requireAuth } from "../middleware/auth";
 import { requireTenant, TenantRequest, requireTenantRole, requirePermission} from "../middleware/tenant";
 import * as flagService from "../../../application/featureFlagService";
+import { validateBody } from "../middleware/validate";
+import { createFeatureFlagSchema, updateFeatureFlagSchema } from "../../../domain/validationSchemas";
+
 
 const router = Router();
 
@@ -13,12 +16,12 @@ router.get("/feature-flags", requireAuth, async (_req, res) => {
   res.json(await flagService.listFlags());
 });
 
-router.post("/feature-flags", requireAuth, requireTenant, requirePermission("flag", "create"), async (req, res) => {
+router.post("/feature-flags", requireAuth, requireTenant, requirePermission("flag", "create"), validateBody(createFeatureFlagSchema), async (req, res) => {
   const flag = await flagService.createFlag(req.body.key, req.body.description);
   res.status(201).json(flag);
 });
 
-router.patch("/feature-flags/:id", requireAuth, requireTenant, requirePermission("flag", "update"), async (req, res) => {
+router.patch("/feature-flags/:id", requireAuth, requireTenant, requirePermission("flag", "update"), validateBody(updateFeatureFlagSchema), async (req, res) => {
   const flag = await flagService.updateFlag(paramStr(req.params.id), req.body);
   res.json(flag);
 });

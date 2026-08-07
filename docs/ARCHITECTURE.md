@@ -139,10 +139,10 @@ imports Express types or the HTTP error-handler module.
   sane built-in default matrix per role. An Owner can grant/restrict a
   specific role's access to a specific resource/action for their org
   without a code change or redeploy — this satisfies the spec's explicit
-  "permissions must be dynamic rather than hardcoded" requirement. A
-  smaller number of lower-stakes routes (evaluate/restore/share) still use
-  the simpler static `requireTenantRole` check — a deliberate scope choice,
-  not an oversight (see TRADEOFFS.md).
+  "permissions must be dynamic rather than hardcoded" requirement. Every
+  mutating and privileged route (including evaluate/restore/share, which
+  previously used a simpler static role check) now goes through this same
+  mechanism — one permission system across the whole API, not two.
 - **CSRF**: double-submit-cookie pattern via `csrf-csrf`, with an explicit
   `getTokenFromRequest` (required for the installed major version) and a
   session identifier that is NOT tied to the rotating access token (an
@@ -252,8 +252,16 @@ Actions rather than a chatbot's turn-by-turn memory model.
 - **Middleware ordering** was a real, fixed bug: CSRF protection now runs
   strictly before every router; the 4-arg error handler is mounted last.
 - Zod request validation (`validate.ts`) is applied to auth, organization,
-  and workflow mutating routes — not yet extended to every mutating route
-  across every module (a scope boundary, see TRADEOFFS.md).
+  workflow, form, rule, and feature-flag mutating routes. File upload
+  routes use `multipart/form-data`, validated instead via MIME-type/size
+  checks in `fileService.ts` (Zod body validation doesn't apply the same
+  way to multipart bodies).
+- **Metrics**: `GET /metrics` (outside `/api/v1`) exposes real
+  Prometheus-format counters/histograms via `prom-client` — HTTP request
+  count and duration by method/route/status, and workflow run count by
+  final status. No auth on this route, matching standard scrape-endpoint
+  convention. This is genuine output, not a stub; no Grafana dashboard is
+  built against it yet (see TRADEOFFS.md).
 
 ## 9. Frontend architecture
 
@@ -266,19 +274,27 @@ Actions rather than a chatbot's turn-by-turn memory model.
   to localStorage.
 - **Undo/redo**: a real history stack (`useGraphHistory`) pushed before
   every canvas mutation (node add/delete/config change), bound to
-  Ctrl/Cmd+Z / Ctrl/Cmd+Shift+Z.
+  Ctrl/Cmd+Z / Ctrl/Cmd+Shift+Z. The open node config panel derives its
+  displayed node live from current canvas state by ID lookup rather than a
+  one-time snapshot, so it correctly reflects undo/redo instead of showing
+  stale data (an earlier version didn't — fixed).
 - Error boundaries wrap the whole app; every dashboard route is lazy-loaded
   behind `React.lazy`/`Suspense`.
-- Workflows are **re-fetched fresh** every time one is opened from the list
-  (an earlier version showed stale cached data until a manual page reload —
-  fixed), and the parent list syncs after every save.
+- Workflows and rules are **re-fetched fresh** every time one is opened
+  from their respective list (an earlier version showed stale cached data
+  until a manual page reload — fixed for both), and the parent list syncs
+  after every save.
 
 ## 10. Known, honestly-documented scope boundaries
 
-See TRADEOFFS.md for the full list with reasoning. Headline items: no
-Prometheus/Grafana metrics; cron scheduler is in-process (misses a run due
-during a backend restart window rather than queuing it); email invitation
-delivery not implemented; per-API-key and global rate limiting are
-in-process, not Redis-backed (documented scaling limitation); form file-upload
-fields are UI-only, not wired to real storage; notification @mentions are
+See TRADEOFFS.md for the full list with reasoning, including a dedicated
+section on real bugs found and fixed during a manual smoke-testing pass
+(rule evaluator vacuous truth, conditional-branch-skip status semantics,
+audit log pagination, cross-page version comparison, and others). Headline
+remaining gaps: no Grafana dashboard (the `/metrics` endpoint itself is
+real); cron scheduler is in-process (misses a run due during a backend
+restart window rather than queuing it); email invitation delivery not
+implemented; per-API-key and global rate limiting are in-process, not
+Redis-backed (documented scaling limitation); form file-upload fields are
+UI-only, not wired to real storage; notification @mentions are
 structured-config-based, not free-text `@name` parsing.

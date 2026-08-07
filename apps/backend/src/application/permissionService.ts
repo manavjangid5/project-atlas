@@ -1,10 +1,10 @@
 import { prisma } from "@atlas/database";
 
 const DEFAULT_MATRIX: Record<string, Record<string, string[]>> = {
-  workflow: { create: ["OWNER", "ADMIN", "DEVELOPER"], update: ["OWNER", "ADMIN", "DEVELOPER"], delete: ["OWNER", "ADMIN", "DEVELOPER"], run: ["OWNER", "ADMIN", "DEVELOPER"] },
+  workflow: { create: ["OWNER", "ADMIN", "DEVELOPER"], update: ["OWNER", "ADMIN", "DEVELOPER"], delete: ["OWNER", "ADMIN", "DEVELOPER"], run: ["OWNER", "ADMIN", "DEVELOPER"], restoreVersion: ["OWNER", "ADMIN", "DEVELOPER"] },
   form: { create: ["OWNER", "ADMIN", "DEVELOPER"], update: ["OWNER", "ADMIN", "DEVELOPER"], submit: ["OWNER", "ADMIN", "DEVELOPER", "VIEWER"] },
-  rule: { create: ["OWNER", "ADMIN", "DEVELOPER"], update: ["OWNER", "ADMIN", "DEVELOPER"], delete: ["OWNER", "ADMIN", "DEVELOPER"] },
-  file: { create: ["OWNER", "ADMIN", "DEVELOPER"], delete: ["OWNER", "ADMIN", "DEVELOPER"] },
+  rule: { create: ["OWNER", "ADMIN", "DEVELOPER"], update: ["OWNER", "ADMIN", "DEVELOPER"], delete: ["OWNER", "ADMIN", "DEVELOPER"], evaluate: ["OWNER", "ADMIN", "DEVELOPER"] },
+  file: { create: ["OWNER", "ADMIN", "DEVELOPER"], delete: ["OWNER", "ADMIN", "DEVELOPER"], restore: ["OWNER", "ADMIN", "DEVELOPER"], share: ["OWNER", "ADMIN", "DEVELOPER"] },
   flag: { create: ["OWNER"], update: ["OWNER"], delete: ["OWNER"] },
 };
 

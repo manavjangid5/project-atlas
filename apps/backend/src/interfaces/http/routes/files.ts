@@ -31,12 +31,12 @@ router.delete("/files/:id", requireAuth, requireTenant, requirePermission("file"
   res.status(204).send();
 });
 
-router.post("/files/:id/restore", requireAuth, requireTenant, requirePermission("file", "create"), async (req: TenantRequest, res) => {
+router.post("/files/:id/restore", requireAuth, requireTenant, requirePermission("file", "restore"), async (req: TenantRequest, res) => {
   const restored = await fileService.restoreFile(req.tenant!.organizationId, paramStr(req.params.id));
   res.json(restored);
 });
 
-router.post("/files/:id/share", requireAuth, requireTenant, requirePermission("file", "create"), async (req: TenantRequest, res) => {
+router.post("/files/:id/share", requireAuth, requireTenant, requirePermission("file", "share"), async (req: TenantRequest, res) => {
   const link = await fileService.createShareLink(req.tenant!.organizationId, paramStr(req.params.id), req.body.expiresInHours);
   res.status(201).json({ token: link.token, expiresAt: link.expiresAt });
 });

@@ -2,6 +2,9 @@ import { Router } from "express";
 import { requireAuth } from "../middleware/auth";
 import { requireTenant, TenantRequest, requireTenantRole, requirePermission } from "../middleware/tenant";
 import * as formService from "../../../application/formService";
+import { validateBody } from "../middleware/validate";
+import { createFormSchema, updateFormFieldsSchema, submitFormSchema } from "../../../domain/validationSchemas";
+
 
 const router = Router();
 
@@ -17,12 +20,12 @@ router.get("/forms/:id", requireAuth, requireTenant, async (req: TenantRequest, 
   res.json(await formService.getForm(req.tenant!.organizationId, paramStr(req.params.id)));
 });
 
-router.post("/forms", requireAuth, requireTenant, requirePermission("form", "create"), async (req: TenantRequest, res) => {
+router.post("/forms", requireAuth, requireTenant, requirePermission("form", "create"), validateBody(createFormSchema), async (req: TenantRequest, res) => {
   const form = await formService.createForm(req.tenant!.organizationId, req.body.name);
   res.status(201).json(form);
 });
 
-router.patch("/forms/:id", requireAuth, requireTenant, requirePermission("form", "update"), async (req: TenantRequest, res) => {
+router.patch("/forms/:id", requireAuth, requireTenant, requirePermission("form", "update"), validateBody(updateFormFieldsSchema), async (req: TenantRequest, res) => {
   const form = await formService.updateFormFields(
     req.tenant!.organizationId,
     paramStr(req.params.id),
@@ -31,7 +34,7 @@ router.patch("/forms/:id", requireAuth, requireTenant, requirePermission("form",
   res.json(form);
 });
 
-router.post("/forms/:id/submit", requireAuth, requireTenant, requirePermission("form", "submit"), async (req: TenantRequest, res) => {
+router.post("/forms/:id/submit", requireAuth, requireTenant, requirePermission("form", "submit"), validateBody(submitFormSchema), async (req: TenantRequest, res) => {
   const submission = await formService.submitForm(
     req.tenant!.organizationId,
     paramStr(req.params.id),

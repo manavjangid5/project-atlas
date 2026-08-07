@@ -2,11 +2,11 @@
 
 **AI-powered collaborative workflow automation platform** — a self-hosted alternative to Zapier/n8n with AI as a first-class node type (including natural-language workflow generation), built as a multi-tenant SaaS with dynamic permissions, dynamic forms, and a rules engine.
 
-Observability is structured request logging (morgan) and per-node execution logs, plus a `/health` endpoint that checks DB and queue connectivity. There is no centralized metrics system — Prometheus/Grafana are not implemented (see TRADEOFFS.md).
+Observability is structured request logging (morgan), per-node execution logs, a `/health` endpoint that checks DB and queue connectivity, and a real `GET /metrics` endpoint (Prometheus format, via `prom-client` — HTTP request counts/duration, workflow run counts by status). There is no Grafana dashboard built against these metrics — the scrape endpoint itself is real, visualization is not (see TRADEOFFS.md).
 
 🔗 **Live app:** https://project-atlas-frontend.onrender.com
 🔗 **Live API:** https://project-atlas-vupz.onrender.com/api/v1/health
-🔗 **API docs (Swagger):** https://project-atlas-vupz.onrender.com/api/docs
+🔗 **API docs (Swagger):** `<backend URL>/api/docs`
 
 ---
 
@@ -93,8 +93,8 @@ Every push to main runs type-checking, linting (zero-warning enforced, not bypas
 
 ## Testing
 
-Unit tests: rule evaluator (including nested-path resolution), JWT/refresh-token rotation and reuse detection, graph executor (parallel branches, skip-on-failure, conditional branching). Integration tests: cross-tenant access denial, CSRF regression, refresh-token-family revocation. One Playwright e2e test covers the core login→build→run journey. See **docs/FINAL_SMOKE_TEST.md** for the full manual regression script covering every feature, run before any deployment.
+Unit tests: rule evaluator (nested-path resolution, empty-group vacuous-truth guard, full nested AND/OR trees against realistic data), JWT/refresh-token rotation and reuse detection, graph executor (parallel branches, skip-on-failure, and correctly distinguishing a legitimately-skipped conditional branch from a genuine upstream failure), the dynamic permission model's override-vs-default-matrix fallback, and the SSRF guard's actual IP/protocol blocklist. Integration tests: cross-tenant access denial, CSRF regression, refresh-token-family revocation. One Playwright e2e test covers the core login→build→run journey. Several of the above tests exist specifically because manual testing (see `docs/FINAL_SMOKE_TEST.md`) found real bugs with zero prior automated coverage — see TRADEOFFS.md for the full list of what was found and fixed. See **docs/DEPLOYMENT.md**'s "Verification status" section for an honest breakdown of what's been confirmed live vs. locally tested only.
 
 ## Honest known gaps
 
-Prometheus/Grafana metrics, email-based invitation delivery, notification free-text @mention parsing (mentions are supported via structured rule-action config, not @name text parsing), form file-upload fields not wired to real storage, cron scheduler is in-process (a backend restart can miss a run due exactly during the restart window, not queued for later). Full list with reasoning: **docs/TRADEOFFS.md**.
+A Grafana dashboard (the `/metrics` scrape endpoint itself is real, but nothing visualizes it), email-based invitation delivery, notification free-text @mention parsing (mentions are supported via structured rule-action config, not @name text parsing), form file-upload fields not wired to real storage, cron scheduler is in-process (a backend restart can miss a run due exactly during the restart window, not queued for later). Full list with reasoning: **docs/TRADEOFFS.md**.

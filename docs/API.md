@@ -39,24 +39,47 @@ automatically.
 
 ## Workflows (`/workflows`)
 
-> Additional public endpoints:
-> - `POST /webhooks/:token` — Public webhook trigger.
-> - `GET /public/workflows` — API-key authenticated.
-> - `POST /public/workflows/:id/run` — API-key authenticated.
-
+Mutating routes are gated by the dynamic permission model
+(`requirePermission("workflow", <action>)`), not a hardcoded role list — see
+ARCHITECTURE.md.
 
 | Method | Path | Description |
 |---|---|---|
 | GET | `/workflows` | List org's workflows |
 | GET | `/workflows/:id` | Get one workflow |
-| POST | `/workflows` | Create (empty graph) |
+| POST | `/workflows` | Create (empty graph), generates a `webhookToken` |
 | PATCH | `/workflows/:id` | Save graph — also writes a `WorkflowVersion` snapshot |
 | DELETE | `/workflows/:id` | Soft delete |
-| POST | `/workflows/:id/run` | Trigger execution — returns `202` + `runId` immediately |
+| POST | `/workflows/:id/run` | Trigger execution — returns `202` + `runId` immediately. `403` if the graph contains an AI node and the `ai_node_enabled` feature flag is off for this org. |
 | GET | `/workflows/:id/runs` | List execution runs with logs |
 | GET | `/workflows/:id/runs/:runId` | Get one run with logs |
-| GET | `/workflows/:id/versions` | List saved workflow versions (paginated) |
-| POST | `/workflows/:id/versions/:versionId/restore` | Restore a previous version (creates a new version) |
+| GET | `/workflows/:id/versions?page=` | Paginated version history |
+| POST | `/workflows/:id/versions/:versionId/restore` | Restore a version (creates a new version from it) |
+| PATCH | `/workflows/:id/schedule` | Set/clear a cron schedule (`cronSchedule` body field, validated); no dedicated frontend UI yet — API only |
+
+## AI Workflow Generation (`/workflows/generate`, `/workflows/:id/suggest-next`, `/ai/stream-test`)
+
+| Method | Path | Description |
+|---|---|---|
+| POST | `/workflows/generate` | Body: `{ instruction }`. Generates and creates a new workflow (validated node kinds/edges) via Gemini from a natural-language description. |
+| POST | `/workflows/:id/suggest-next` | Body: `{ instruction? }`. Returns up to 3 AI-suggested next nodes `{ kind, label, reason }` for the given workflow's current graph. |
+| POST | `/ai/stream-test` | Body: `{ prompt }`. **Server-Sent Events** response — streams an AI Prompt preview token-chunk by token-chunk. CSRF-exempt (read-only preview, no mutation). |
+
+## Webhooks (`/webhooks`)
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| POST | `/webhooks/:token` | **Public** — the token itself is the secret | Triggers a run for the workflow owning that `webhookToken`. Request body becomes `trigger_payload` in the run's variables. CSRF-exempt (external caller, no session). |
+
+## Public API (`/public`) — API-key authenticated, for external integrations
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| GET | `/public/workflows` | API-key | List workflows for the key's organization |
+| POST | `/public/workflows/:id/run` | API-key | Trigger a run |
+
+Send header `X-API-Key: <raw key>`. Subject to a per-key rate limit (60
+requests/minute) in addition to any global limiting.
 
 ## Forms (`/forms`)
 
@@ -66,7 +89,7 @@ automatically.
 | GET | `/forms/:id` | Get one form |
 | POST | `/forms` | Create (empty fields) |
 | PATCH | `/forms/:id` | Save field definitions |
-| POST | `/forms/:id/submit` | Submit data — validated server-side against field defs; evaluates active rules |
+| POST | `/forms/:id/submit` | Submit data — validated server-side against field defs |
 | GET | `/forms/:id/submissions` | List submissions |
 
 ## Rules (`/rules`)
@@ -99,7 +122,7 @@ automatically.
 | Method | Path | Description |
 |---|---|---|
 | GET | `/files` | List files |
-| POST | `/files` | Upload (multipart `form-data`, field name `file`, 20 MB cap; optional `replacesFileId` for versioning) |
+| POST | `/files` | Upload (multipart `form-data`, field name `file`; optional `replacesFileId` for versioning) |
 | GET | `/files/:id/download-url` | Returns a signed, time-limited R2 download URL |
 | DELETE | `/files/:id` | Soft delete |
 | POST | `/files/:id/restore` | Undo soft delete |
@@ -115,11 +138,11 @@ automatically.
 | DELETE | `/api-keys/:id` | OWNER/ADMIN | Revoke |
 | GET | `/api-keys/usage` | Session | Total + last-24h request counts |
 
-**API-key authenticated routes** (external/programmatic access, distinct from
-cookie session auth): send header `X-API-Key: <raw key>`. Validated by the
-`requireApiKey` middleware, which also logs usage per-request. No routes are
-currently wired to use this middleware by default — it's available for any
-route that should support external integrations.
+**API-key authenticated routes** are real and mounted: `GET
+/public/workflows` and `POST /public/workflows/:id/run` (see above),
+authenticated via `X-API-Key` and rate-limited per key. This closes what was
+previously a documented gap (key management existed without any route
+actually requiring the key).
 
 ## Feature Flags (`/feature-flags`)
 
@@ -135,7 +158,7 @@ route that should support external integrations.
 
 | Method | Path | Description |
 |---|---|---|
-| GET | `/search?q=` | Cross-module search (workflows, forms, rules, files, members) via Postgres `ILIKE` |
+| GET | `/search?q=` | Cross-module search via Postgres `ILIKE`: workflows, forms, rules, files, members, audit log actions, and API key names. Organizations and execution logs specifically are not yet indexed (spec also lists these — a real, small remaining gap). |
 
 ## Notifications (`/notifications`)
 
@@ -150,14 +173,17 @@ above are for initial load / catch-up only. Client connects, sends
 `join-org` with the active org ID after the server confirms the httpOnly
 cookie is valid, then listens for `notification` events.
 
-## Internal (`/internal`) — service-to-service, no auth
+## Internal (`/internal`) — service-to-service, authenticated
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| POST | `/internal/notify` | `X-Internal-Secret` header (shared secret, `INTERNAL_SERVICE_SECRET` env var) | Called by the worker on run completion to trigger a notification. Previously unauthenticated — fixed. |
+
+## Health & Docs
 
 | Method | Path | Description |
 |---|---|---|
-| POST | `/internal/notify` | Called by the worker on run completion to trigger a notification. No auth — see TRADEOFFS.md for the documented reasoning and production hardening note. |
-
-## Health
-
-| Method | Path | Description |
-|---|---|---|
-| GET | `/health` | DB + queue connectivity check, used by uptime monitors / keep-alive pings |
+| GET | `/health` | Checks both DB (`SELECT 1`) and RabbitMQ channel connectivity; returns `503` if either is down, `200` with `status: "ok"` if both are up. Used by uptime monitors / keep-alive pings. |
+| GET | `/metrics` | Public, no auth (standard scrape-endpoint convention). Prometheus-format output via `prom-client`: HTTP request count/duration by method/route/status, workflow run count by final status. Not under `/api/v1`. No Grafana dashboard is built against this yet. |
+| GET | `/csrf-token` | Public. Issues a CSRF token/cookie pair; required before any mutating request. |
+| GET | `/api/docs` | Live Swagger/OpenAPI UI (not under `/api/v1`). |

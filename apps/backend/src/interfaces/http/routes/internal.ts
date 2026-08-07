@@ -2,11 +2,13 @@ import { Router } from "express";
 import { prisma } from "../../../infrastructure/database/prismaClient";
 import { createNotification } from "../../../application/notificationService";
 import { requireInternalSecret } from "../middleware/internalAuth";
+import { workflowRunCounter } from "../../../infrastructure/metrics/metrics";
 
 const router = Router();
 
 router.post("/internal/notify", requireInternalSecret, async (req, res) => {
   const { runId, status } = req.body;
+  workflowRunCounter.inc({ status });
   const run = await prisma.executionRun.findUnique({
     where: { id: runId },
     include: { workflow: true },
