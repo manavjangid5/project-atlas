@@ -3,6 +3,7 @@ import { assertSafeUrl } from "./urlSafety";
 import { executeAiPrompt } from "./aiNode";
 export interface ExecutionContext {
   variables: Record<string, any>;
+  organizationId?: string;
 }
 
 export interface NodeResult {
@@ -152,8 +153,8 @@ async function executeDatabaseQuery(config: any, ctx: ExecutionContext): Promise
   if (!table) return { status: "FAILED", error: `Table "${config.table}" is not queryable` };
   try {
     const results = await (prisma as any)[table].findMany({
-      where: { organizationId: config.organizationId },
-      take: config.limit || 10,
+      where: { organizationId: ctx.organizationId },
+      take: Number(config.limit) || 10,
     });
     return { status: "SUCCESS", output: results };
   } catch (err: any) {

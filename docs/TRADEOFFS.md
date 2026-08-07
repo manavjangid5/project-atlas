@@ -6,6 +6,14 @@ the honest cost of each one is. Written for a reviewer who wants to see
 
 ## Infrastructure pivots (things that changed mid-build, not by choice)
 
+**Kafka → RabbitMQ.** Originally planned Upstash Kafka (free, serverless) per
+the assignment's own tech stack table (`RabbitMQ / Kafka`). Discovered mid-build
+that Upstash fully discontinued their Kafka product in March 2025. Pivoted to
+RabbitMQ via CloudAMQP's free tier — the other explicitly-allowed option in
+the spec. Cost: rebuilt the producer/consumer layer once (`kafkajs` →
+`amqplib`); the graph-executor logic itself was untouched since it only
+depends on receiving a JSON message, not the transport.
+
 **Render Background Worker (free) → Worker-as-Web-Service hack.** Render
 removed the free tier for its dedicated Background Worker service type
 mid-project. Rather than pay $7/mo, the worker runs as a free Web Service with
@@ -67,13 +75,14 @@ UI for the inviter to copy/share manually — no transactional email service
 (SES/Resend/Postmark) is wired up. Documented as a clear "next thing to add"
 rather than left ambiguous.
 
-**Internal `/internal/notify` endpoint has no authentication.** The worker
-calls this backend endpoint on run completion to trigger a real-time
-notification. It's unauthenticated because in this deployment topology it's
-only reachable via the worker's own outbound call, on a URL not exposed
-anywhere in the frontend. Production hardening would add a shared
-internal-service secret header (`X-Internal-Secret`) validated before
-processing — flagged explicitly rather than silently left open.
+**Internal `/internal/notify` endpoint — was unauthenticated, now fixed.**
+The worker calls this backend endpoint on run completion to trigger a
+real-time notification. An earlier version left it open with no auth, which
+a review correctly flagged as unacceptable for multi-tenant SaaS regardless
+of deployment-topology assumptions. Fixed: both worker and backend now share
+an `INTERNAL_SERVICE_SECRET` env var, checked via `requireInternalSecret`
+middleware on the route and sent as an `X-Internal-Secret` header by the
+worker's call.
 
 **GitHub OAuth uses a single callback URL.** Unlike Google (which allows
 multiple redirect URIs per client), GitHub OAuth Apps support exactly one
@@ -82,16 +91,21 @@ breaks (Google login still works locally). The alternative — a second,
 dev-only GitHub OAuth App — was noted but not set up, given time constraints;
 trivial to add later.
 
-**Worker's Prisma Client is a direct dependency, not a shared workspace
-package.** `apps/worker` lists `@prisma/client` in its own `package.json`
-(pinned to the same version as backend) and points its own `prisma generate`
-at the backend's schema file via `--schema=../backend/prisma/schema.prisma`.
-This works correctly and is what's deployed, but the cleaner long-term
-structure would be extracting a `packages/database` workspace package that
-both `apps/backend` and `apps/worker` depend on, so there's exactly one
-source of truth for the generated client rather than two independent
-generation steps that happen to target the same schema file. Noted as the
-first thing to refactor if this project continued past the assignment.
+**`packages/database` extraction — and the bug it surfaced.** Prisma was
+extracted into a shared `packages/database` workspace package consumed by
+both `apps/backend` and `apps/worker`, closing the earlier "two independent
+generation steps" gap. Extracting it surfaced a real production-only bug
+worth documenting: the package's `package.json` initially pointed `main` at
+raw `src/index.ts` instead of compiled output. Local dev (`ts-node-dev`)
+executes TypeScript directly and never noticed; production (`node
+dist/server.js`, plain Node) cannot execute `.ts` files at all, so the
+`prisma` client silently resolved to `undefined` in some import paths in
+production while appearing to work at server startup. Fixed by giving
+`packages/database` its own real `tsc` build step, wired into both Render's
+build commands and CI. Lesson: any shared internal package needs its own
+compiled build step verified in a production-like (plain `node`, not
+`ts-node`) context — dev tooling can mask a gap that only breaks at
+deploy time.
 
 **Rate limiting is in-process (`express-rate-limit`), not Redis-backed.**
 Fine for a single backend instance (current deployment topology). Would need

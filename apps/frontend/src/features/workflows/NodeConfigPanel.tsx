@@ -53,6 +53,10 @@ export default function NodeConfigPanel({
           <p className="text-xs text-muted capitalize">
             {kind.replace("_", " ")}
           </p>
+          <p className="text-xs text-muted font-mono mt-1">
+            ID: {node.id} — reference this node's output as{" "}
+            <code className="bg-bg px-1 rounded">{`{${node.id}_output}`}</code>
+          </p>
         </div>
         <button
           onClick={onClose}

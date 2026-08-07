@@ -7,26 +7,42 @@ interface Props {
   onDelete: () => void;
 }
 
-const TYPE_OPTIONS: FormField["type"][] = ["text", "number", "email", "select", "checkbox", "file"];
+const TYPE_OPTIONS: FormField["type"][] = [
+  "text",
+  "number",
+  "email",
+  "select",
+  "checkbox",
+  "file",
+];
 
-export default function FieldEditorRow({ field, allFields, onChange, onDelete }: Props) {
+export default function FieldEditorRow({
+  field,
+  allFields,
+  onChange,
+  onDelete,
+}: Props) {
   const otherFields = allFields.filter((f) => f.id !== field.id);
 
   return (
     <div className="bg-surface border border-border rounded-md p-4 space-y-3">
-      <div className="flex gap-2">
+      <div className="flex gap-2 items-start">
         <input
           value={field.label}
           onChange={(e) => onChange({ ...field, label: e.target.value })}
           placeholder="Field label"
           className="flex-1 bg-bg border border-border rounded-sm px-3 py-2 text-sm"
         />
+
         <select
           value={field.type}
           onChange={(e) =>
-            onChange({ ...field, type: e.target.value as FormField["type"] })
+            onChange({
+              ...field,
+              type: e.target.value as FormField["type"],
+            })
           }
-          className="bg-bg border border-border rounded-sm px-2 py-2 text-sm"
+          className="w-36 shrink-0 bg-bg border border-border rounded-sm px-2 py-2 text-sm"
         >
           {TYPE_OPTIONS.map((t) => (
             <option key={t} value={t}>
@@ -34,9 +50,10 @@ export default function FieldEditorRow({ field, allFields, onChange, onDelete }:
             </option>
           ))}
         </select>
+
         <button
           onClick={onDelete}
-          className="text-muted hover:text-danger px-2 text-sm"
+          className="text-muted hover:text-danger px-2 text-sm shrink-0"
         >
           ✕
         </button>
@@ -59,15 +76,21 @@ export default function FieldEditorRow({ field, allFields, onChange, onDelete }:
         />
       )}
 
-      <div className="flex items-center gap-4 text-xs text-muted">
+      <div className="flex items-center gap-4 text-xs text-muted flex-wrap">
         <label className="flex items-center gap-1.5">
           <input
             type="checkbox"
             checked={!!field.required}
-            onChange={(e) => onChange({ ...field, required: e.target.checked })}
+            onChange={(e) =>
+              onChange({
+                ...field,
+                required: e.target.checked,
+              })
+            }
           />
           Required
         </label>
+
         <label className="flex items-center gap-1.5">
           <input
             type="checkbox"
@@ -83,8 +106,9 @@ export default function FieldEditorRow({ field, allFields, onChange, onDelete }:
         </label>
 
         {otherFields.length > 0 && (
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 flex-wrap">
             <span>Show only if</span>
+
             <select
               value={field.showIf?.fieldId || ""}
               onChange={(e) =>
@@ -98,27 +122,33 @@ export default function FieldEditorRow({ field, allFields, onChange, onDelete }:
                     : undefined,
                 })
               }
-              className="bg-bg border border-border rounded-sm px-1.5 py-1"
+              className="max-w-[160px] bg-bg border border-border rounded-sm px-1.5 py-1"
             >
               <option value="">— none —</option>
+
               {otherFields.map((f) => (
                 <option key={f.id} value={f.id}>
                   {f.label || f.id}
                 </option>
               ))}
             </select>
+
             {field.showIf && (
               <>
                 <span>equals</span>
+
                 <input
                   value={String(field.showIf.equals)}
                   onChange={(e) =>
                     onChange({
                       ...field,
-                      showIf: { ...field.showIf!, equals: e.target.value },
+                      showIf: {
+                        ...field.showIf!,
+                        equals: e.target.value,
+                      },
                     })
                   }
-                  className="w-20 bg-bg border border-border rounded-sm px-1.5 py-1"
+                  className="w-24 shrink-0 bg-bg border border-border rounded-sm px-1.5 py-1"
                 />
               </>
             )}

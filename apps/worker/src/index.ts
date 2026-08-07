@@ -17,7 +17,7 @@ async function main() {
   channel.consume(QUEUE_NAME, async (msg) => {
     if (!msg) return;
     const payload = JSON.parse(msg.content.toString());
-    const { runId, graph, initialPayload } = payload;
+    const { runId, graph, initialPayload, organizationId  } = payload;
 
     // Idempotency guard: if RabbitMQ redelivers this message (e.g. after
     // a worker crash before ack), don't re-execute a run that's already
@@ -32,7 +32,7 @@ async function main() {
 
     logger.info(`Executing run ${runId}...`);
     try {
-      const status = await executeGraph(runId, graph, initialPayload);
+      const status = await executeGraph(runId, graph, initialPayload, organizationId);
       logger.info(`Run ${runId} finished: ${status}`);
       channel.ack(msg);
     } catch (err) {

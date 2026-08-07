@@ -1,7 +1,12 @@
 import type { ConditionNode, Operator } from "../domain/ruleTypes";
 
+
+function getFieldValue(data: Record<string, any>, path: string): any {
+  return path.split(".").reduce((obj, key) => (obj != null ? obj[key] : undefined), data);
+}
+
 function evalLeafCondition(field: string, operator: Operator, expected: any, data: Record<string, any>): boolean {
-  const actual = data[field];
+  const actual = getFieldValue(data, field);
   switch (operator) {
     case "equals": return actual === expected;
     case "notEquals": return actual !== expected;

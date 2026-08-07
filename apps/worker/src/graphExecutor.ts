@@ -50,7 +50,7 @@ async function runNodeWithRetry(node: GraphNode, ctx: ExecutionContext, runId: s
   }
 }
 
-export async function executeGraph(runId: string, graph: Graph, initialPayload?: unknown) {
+export async function executeGraph(runId: string, graph: Graph, initialPayload?: unknown, organizationId?: string) {
   await prisma.executionRun.update({ where: { id: runId }, data: { status: "RUNNING" } });
 
   const incoming = new Map<string, GraphEdge[]>();
@@ -62,7 +62,7 @@ export async function executeGraph(runId: string, graph: Graph, initialPayload?:
   const skipped = new Set<string>();
   // Records which branch a conditional node actually took, once it's run.
   const branchDecisions = new Map<string, "true" | "false">();
-  const ctx: ExecutionContext = { variables: initialPayload ? { trigger_payload: initialPayload } : {} };
+  const ctx: ExecutionContext = { variables: initialPayload ? { trigger_payload: initialPayload } : {}, organizationId };
   const nodeMap = new Map(graph.nodes.map((n) => [n.id, n]));
 
   function edgeSatisfied(edge: GraphEdge): "yes" | "no" | "pending" {

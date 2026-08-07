@@ -8,8 +8,8 @@ managed services, all env-var driven.
 | Service | Used for | Why this one |
 |---|---|---|
 | **Render Postgres** | Primary database | Free tier; expires 30 days after creation — recreate close to any submission/review date if there's a gap |
-| **CloudAMQP** (RabbitMQ, free "Little Lemur" plan) | Message queue for workflow execution | Originally planned Upstash Kafka; Upstash discontinued Kafka in March 2025 |
-| **Cloudflare R2** | File storage (S3-compatible) | Generous free tier, card required, charges implemented after free limit exhaustion|
+| **CloudAMQP** (RabbitMQ, free "Little Lemur" plan) | Message queue for workflow execution | Originally planned Upstash Kafka; Upstash discontinued Kafka in March 2025 (see TRADEOFFS.md) |
+| **Cloudflare R2** | File storage (S3-compatible) | Generous free tier, no card required |
 | **Google AI Studio** | Gemini API key for AI nodes | Free tier |
 | **Google Cloud Console** | Google OAuth credentials | — |
 | **GitHub Developer Settings** | GitHub OAuth credentials | — |
@@ -26,10 +26,13 @@ config that avoids Render silently falling back to npm.
 1. Render dashboard → New → PostgreSQL → name `atlas-db`, Free plan.
 2. Copy the **Internal Database URL** (for backend/worker services) and the
    **External Database URL** (for running migrations from your local machine).
-3. Run migrations against the fresh DB from your local machine:
+3. Run migrations against the fresh DB from your local machine (Prisma
+   schema and migrations now live in `packages/database`, not `apps/backend`,
+   since Prisma was extracted into a shared workspace package consumed by
+   both backend and worker):
    ```
-   cd apps/backend
-   # temporarily set DATABASE_URL in .env to the External Database URL
+   cd packages/database
+   # temporarily set DATABASE_URL in packages/database/.env to the External Database URL
    npx prisma migrate deploy
    # revert .env back to your local Postgres URL afterward
    ```

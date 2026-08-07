@@ -39,6 +39,12 @@ automatically.
 
 ## Workflows (`/workflows`)
 
+> Additional public endpoints:
+> - `POST /webhooks/:token` — Public webhook trigger.
+> - `GET /public/workflows` — API-key authenticated.
+> - `POST /public/workflows/:id/run` — API-key authenticated.
+
+
 | Method | Path | Description |
 |---|---|---|
 | GET | `/workflows` | List org's workflows |
@@ -49,6 +55,8 @@ automatically.
 | POST | `/workflows/:id/run` | Trigger execution — returns `202` + `runId` immediately |
 | GET | `/workflows/:id/runs` | List execution runs with logs |
 | GET | `/workflows/:id/runs/:runId` | Get one run with logs |
+| GET | `/workflows/:id/versions` | List saved workflow versions (paginated) |
+| POST | `/workflows/:id/versions/:versionId/restore` | Restore a previous version (creates a new version) |
 
 ## Forms (`/forms`)
 
@@ -58,7 +66,7 @@ automatically.
 | GET | `/forms/:id` | Get one form |
 | POST | `/forms` | Create (empty fields) |
 | PATCH | `/forms/:id` | Save field definitions |
-| POST | `/forms/:id/submit` | Submit data — validated server-side against field defs |
+| POST | `/forms/:id/submit` | Submit data — validated server-side against field defs; evaluates active rules |
 | GET | `/forms/:id/submissions` | List submissions |
 
 ## Rules (`/rules`)
@@ -91,7 +99,7 @@ automatically.
 | Method | Path | Description |
 |---|---|---|
 | GET | `/files` | List files |
-| POST | `/files` | Upload (multipart `form-data`, field name `file`; optional `replacesFileId` for versioning) |
+| POST | `/files` | Upload (multipart `form-data`, field name `file`, 20 MB cap; optional `replacesFileId` for versioning) |
 | GET | `/files/:id/download-url` | Returns a signed, time-limited R2 download URL |
 | DELETE | `/files/:id` | Soft delete |
 | POST | `/files/:id/restore` | Undo soft delete |
@@ -152,4 +160,4 @@ cookie is valid, then listens for `notification` events.
 
 | Method | Path | Description |
 |---|---|---|
-| GET | `/health` | DB connectivity check, used by uptime monitors / keep-alive pings |
+| GET | `/health` | DB + queue connectivity check, used by uptime monitors / keep-alive pings |

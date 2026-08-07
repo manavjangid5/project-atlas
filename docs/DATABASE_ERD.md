@@ -1,7 +1,7 @@
 # Project Atlas — Database ER Documentation
 
 Single PostgreSQL database, accessed exclusively through Prisma ORM. Schema
-lives at `apps/backend/prisma/schema.prisma`; the worker imports the same
+lives at `packages\database\prisma\schema.prisma`; the worker imports the same
 generated client as a direct dependency (see TRADEOFFS.md).
 
 ## Entity groups
@@ -36,7 +36,7 @@ generated client as a direct dependency (see TRADEOFFS.md).
 ### Workflow Engine
 
 **Workflow**
-- `id, name, graph (Json — {nodes, edges}), isActive, organizationId, deletedAt? (soft delete), createdAt, updatedAt`
+- `id, name, graph (Json — {nodes, edges}), isActive, organizationId, webhookToken?, cronSchedule?, deletedAt? (soft delete), createdAt, updatedAt`
 - Has many: `versions (WorkflowVersion)`, `runs (ExecutionRun)`
 
 **WorkflowVersion**
@@ -78,7 +78,7 @@ arbitrarily nestable. Evaluated recursively by `ruleEvaluator.ts`.
 ### Notifications & Audit
 
 **Notification**
-- `id, organizationId, userId? (null = org-wide broadcast), title, message, priority (low|normal|high), readAt?, createdAt`
+- `id, organizationId, userId? (null = org-wide broadcast), title, message, priority (low|normal|high), readAt?, groupKey?, mentionedUserId?, createdAt`
 
 **AuditLog**
 - `id, action, userId?, organizationId?, metadata (Json)?, createdAt`
@@ -101,13 +101,20 @@ arbitrarily nestable. Evaluated recursively by `ruleEvaluator.ts`.
 ### API Gateway
 
 **ApiKey**
-- `id, name, keyHash (unique, SHA-256), keyPrefix (first 14 chars, shown to user), organizationId, lastUsedAt?, revokedAt?, createdAt`
+- `id, name, keyHash (unique, SHA-256), keyPrefix (prefix shown to user), organizationId, lastUsedAt?, revokedAt?, createdAt`
 - Has many: `usageLogs (ApiUsageLog)`
 - Raw key is shown to the user exactly once, at creation — matches Stripe/GitHub
   token conventions.
 
 **ApiUsageLog**
 - `id, apiKeyId, endpoint, method, statusCode, createdAt`
+
+### Permissions
+
+**Permission**
+- `id, organizationId, role (OWNER|ADMIN|DEVELOPER|VIEWER), resource, action, allowed`
+- Dynamic per-organization permission override table used by `requirePermission`.
+- `@@unique([organizationId, role, resource, action])` — one override per role/resource/action combination.
 
 ### Feature Flags
 
@@ -133,6 +140,7 @@ Organization ──< Notification (userId nullable = broadcast)
 Organization ──< AuditLog (nullable FK)
 Organization ──< FileAsset ──< FileShareLink
 Organization ──< ApiKey ──< ApiUsageLog
+Organization ──< Permission
 
 FeatureFlag  (standalone — targets orgs via targetOrgIds[] array, not a FK)
 ```

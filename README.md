@@ -1,112 +1,73 @@
 # Project Atlas
 
-**AI-powered collaborative workflow automation platform** — a self-hosted alternative to Zapier/n8n with a first-class AI node, built as a multi-tenant SaaS with organizations, roles, dynamic forms, and a rules engine.
+**AI-powered collaborative workflow automation platform** — a self-hosted alternative to Zapier/n8n with AI as a first-class node type (including natural-language workflow generation), built as a multi-tenant SaaS with dynamic permissions, dynamic forms, and a rules engine.
 
-Observability is currently structured request logging (morgan) and per-node execution logs, not centralized metrics — Prometheus/Grafana are not yet implemented.
+Observability is structured request logging (morgan) and per-node execution logs, plus a `/health` endpoint that checks DB and queue connectivity. There is no centralized metrics system — Prometheus/Grafana are not implemented (see TRADEOFFS.md).
 
-🔗 **Live app:** [https://project-atlas-frontend.onrender.com](https://project-atlas-frontend.onrender.com)
-🔗 **Live API:** [https://project-atlas-vupz.onrender.com/api/v1/health](https://project-atlas-vupz.onrender.com/api/v1/health)
+🔗 **Live app:** https://project-atlas-frontend.onrender.com
+🔗 **Live API:** https://project-atlas-vupz.onrender.com/api/v1/health
+🔗 **API docs (Swagger):** https://project-atlas-vupz.onrender.com/api/docs
 
 ---
 
 ## What is this?
 
-Modern teams glue together Slack, GitHub, forms, spreadsheets, and AI tools
-by hand. Project Atlas lets an organization visually design an automation —
-*"every morning, summarize yesterday's activity with AI and post it to
-Slack"* — on a drag-and-drop canvas, run it reliably with retries and full
-logs, and manage everything (members, forms, rules, files) inside one
-multi-tenant workspace.
+Project Atlas lets an organization visually design an automation — *"every morning, summarize yesterday's GitHub commits with AI and post it to Slack"* — on a drag-and-drop canvas, run it reliably with retries and full logs, and manage everything (members, forms, rules, files) inside one multi-tenant workspace. You can also **describe a workflow in plain English and have AI generate the graph for you.**
 
-For the full technical breakdown of how it's built, read
-**[docs/ARCHITECTURE.md](https://github.com/manavjangid5/project-atlas/blob/main/docs/ARCHITECTURE.md)**.
+Full technical breakdown: **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**.
 
 ## Tech stack
 
 | Layer | Tech |
 |---|---|
-| Frontend | React, TypeScript, Zustand, Tailwind CSS, React Flow, Recharts |
+| Frontend | React, TypeScript, Zustand, Tailwind CSS (CSS-variable theming), React Flow, Recharts |
 | Backend | Node.js, Express, TypeScript, Prisma |
+| Shared | `packages/database` — extracted Prisma schema/client, compiled and consumed by both backend and worker |
 | Database | PostgreSQL |
-| Message Queue | RabbitMQ |
-| Auth | JWT (rotation + reuse detection), Google & GitHub OAuth |
-| AI | Google Gemini |
+| Message Queue | RabbitMQ (priority queues, dead-letter queue, idempotent consumer) |
+| Auth | JWT (rotation + reuse detection), Google & GitHub OAuth, dynamic per-org permission model |
+| AI | Google Gemini — node execution, streaming preview, and full workflow generation from natural language |
 | Storage | Cloudflare R2 (S3-compatible) |
-| Real-time | Socket.io |
+| Real-time | Socket.io (grouped/batched notifications) |
+| Scheduling | In-process cron (node-cron) for scheduled workflow runs |
 | Deployment | Render (frontend static site, backend + worker web services), GitHub Actions CI |
 
-Full endpoint list: **[docs/API.md](https://github.com/manavjangid5/project-atlas/blob/main/docs/API.md)**
-Full database schema: **[docs/DATABASE_ERD.md](https://github.com/manavjangid5/project-atlas/blob/main/docs/DATABASE_ERD.md)**
-Deployment steps: **[docs/DEPLOYMENT.md](https://github.com/manavjangid5/project-atlas/blob/main/docs/DEPLOYMENT.md)**
-Design decisions & known limitations: **[docs/TRADEOFFS.md](https://github.com/manavjangid5/project-atlas/blob/main/docs/TRADEOFFS.md)**
-What's next: **[docs/SCALABILITY_AND_FUTURE_WORK.md](https://github.com/manavjangid5/project-atlas/blob/main/docs/SCALABILITY_AND_FUTURE_WORK.md)**
+Docs: **[API.md](docs/API.md)** · **[DATABASE_ERD.md](docs/DATABASE_ERD.md)** · **[DEPLOYMENT.md](docs/DEPLOYMENT.md)** · **[TRADEOFFS.md](docs/TRADEOFFS.md)** · **[SCALABILITY_AND_FUTURE_WORK.md](docs/SCALABILITY_AND_FUTURE_WORK.md)**
 
 ---
 
 ## Getting started (as a user)
 
-1. **Register** an account (email/password, or continue with Google/GitHub).
-2. On first login you'll be asked to **create an organization** — you
-   automatically become its **Owner**.
-3. You land on the dashboard. The sidebar is your home base — here's what
-   every tab actually does:
+1. **Register** (email/password, or Google/GitHub).
+2. First login → create an **Organization**, you become its **Owner**.
+3. Sidebar tabs:
 
 ### Workflows
-The core of the app. A visual, drag-and-drop canvas (like n8n or Zapier)
-where you build automations out of nodes — HTTP Request, Delay, Conditional,
-Slack, AI Prompt, Webhook. Connect nodes with edges to define execution
-order, click a node to configure it, hit **Save**, then **Run**. A live
-**Run History** panel shows every execution with per-node logs, retries, and
-final status. Runs execute asynchronously on a separate worker process, so
-triggering one never blocks the app. Details: [docs/ARCHITECTURE.md](https://github.com/manavjangid5/project-atlas/blob/main/docs/ARCHITECTURE.md).
+Drag-and-drop canvas (React Flow). Node types: HTTP Request, Delay, Conditional (real true/false branching, not cosmetic), Slack, AI Prompt, Webhook, GitHub, Email (via Resend, sandbox-mode recipient restriction applies), Switch, Loop, Database Query. Click a node to configure it — the panel shows the node's real ID so you can reference its output in another node via `{that-id_output}`. Save, Run, or use **Generate with AI** to create a whole workflow from a plain-English instruction, and **Suggest next** to get AI-suggested next nodes for the graph you're building. Keyboard shortcuts: Ctrl/Cmd+S save, Ctrl/Cmd+Enter run, Ctrl/Cmd+Z / Ctrl/Cmd+Shift+Z undo/redo. **Versions** panel shows paginated history with a two-version **diff** view and one-click restore. Workflows also expose a public **webhook URL** for external triggering and support **cron scheduling** (set via API for now, see API.md).
 
 ### Forms
-A dynamic form builder — add fields (text, number, email, select, checkbox,
-file), mark fields required, and set conditional visibility ("only show this
-field if that checkbox is checked"). A live preview updates as you build.
-Useful for collecting structured input that can later feed into workflows or
-rules.
+Fields: text, number, email, select, checkbox, file (upload UI only — not yet wired to real file storage). Conditional visibility (showIf) and **repeatable fields** ("+ Add another") are both supported.
 
 ### Rules
-A visual, nested **IF/ELSE rule engine** — build AND/OR condition trees
-against arbitrary data (e.g. *"if location equals India AND experience is
-greater than 5"*), attach an action (notify, or trigger a workflow), and test
-it live against sample JSON before relying on it. Entirely data-driven — no
-hardcoded logic.
+Nested AND/OR condition trees, evaluated against arbitrary JSON — including **nested field paths** (e.g. candidate.experience, not just top-level keys). Actions (NOTIFY / TRIGGER_WORKFLOW) are wired into real form-submission flow, not just the test panel.
 
 ### Analytics
-A read-only dashboard: total workflow runs, success rate, average execution
-duration, a 14-day chart of daily executions, a breakdown of which node types
-you use most, and your organization's most active members. Everything here
-is computed from real execution/audit data — nothing is mocked.
+Real data: run counts, success rate, avg duration, daily execution chart, node-usage breakdown, most-active users.
 
 ### Files
-Upload, download, and share files (images, PDFs, text, JSON, CSV — 20MB
-cap). Every re-upload against an existing file creates a new version.
-**Share** generates a time-limited public link anyone can open without
-logging in — useful for sending a file to someone outside your organization.
+Upload/download/share (time-limited public links)/delete, versioned by re-upload.
 
 ### API Keys
-Generate keys for programmatic/external access (raw key shown once). Keys authenticate against `GET /api/v1/public/workflows` and `POST /api/v1/public/workflows/:id/run` via the `X-API-Key` header — a genuine external integration surface, separate from the browser session used by the dashboard.
+Issue/revoke keys with per-key rate limiting (60 req/min). Authenticate external calls via X-API-Key against /api/v1/public/workflows*.
 
 ### Feature Flags
-Turn platform features on/off — either globally, for specific organizations,
-or via a percentage-based gradual rollout slider. Meant for controlled
-rollout of new capabilities without shipping a new deploy for every toggle.
+Global / percentage-rollout / per-org targeting. **Actually gates real behavior** — e.g. disabling ai_node_enabled genuinely blocks AI-node workflow runs for that org, it's not decorative.
 
-### Audit Log
-A timeline of every meaningful action taken in your organization — logins,
-workflow edits and runs, role changes. Exists for accountability and
-debugging ("who changed what, and when").
+### Audit Log, Members, Settings
+Standard — role changes, invites (link shown in-app, no email delivery — see TRADEOFFS.md), org rename.
 
-### Members
-See everyone in your organization and their role (Owner/Admin/Developer/
-Viewer). Owners and Admins can invite new members by email, change roles, or
-remove people. Roles are enforced on the backend, not just hidden in the UI. Viewer is read-only; Owner, Admin, and Developer can create and modify.
-
-### Settings
-Organization-level configuration — currently the organization's display
-name (Owner-only). The natural home for future org-wide preferences.
+### Theme
+Real dark/light toggle (top bar) — not just a fixed dark theme; colors are CSS custom properties, not hardcoded.
 
 ---
 
@@ -117,25 +78,23 @@ git clone <this-repo>
 cd project-atlas
 pnpm install
 
-# apps/backend/.env, apps/worker/.env, apps/frontend/.env — see
-# docs/DEPLOYMENT.md for the full list of required environment variables
+docker compose up -d   # local Postgres + RabbitMQ
 
-docker compose up -d          # local Postgres
-
-cd apps/backend && npx prisma migrate dev && pnpm dev   # terminal 1
-cd apps/worker && pnpm dev                                # terminal 2
-cd apps/frontend && pnpm dev                               # terminal 3
+cd packages/database && npx prisma migrate dev && npx prisma generate && npx tsc
+cd apps/backend && pnpm dev   # terminal 1
+cd apps/worker && pnpm dev    # terminal 2
+cd apps/frontend && pnpm dev  # terminal 3
 ```
-
-Visit `http://localhost:5173`.
+Visit http://localhost:5173. See DEPLOYMENT.md for the full environment variable list — note that **local and production use separate RabbitMQ queue names** (workflow-executions-dev vs workflow-executions) so a running deployed worker never intercepts local test traffic.
 
 ## CI/CD
 
-Every push to `main` runs type-checking, unit tests, and a production build
-across all three packages via GitHub Actions (`.github/workflows/ci.yml`).
+Every push to main runs type-checking, linting (zero-warning enforced, not bypassed), unit + integration tests, and a production build across backend/worker/frontend via GitHub Actions.
 
 ## Testing
 
-Unit tests (Jest) cover the rule engine, JWT/token utilities, and the
-workflow graph executor. One Playwright smoke test covers the core login → build → run journey; this is not full e2e coverage. See
-[docs/TRADEOFFS.md](https://github.com/manavjangid5/project-atlas/blob/main/docs/TRADEOFFS.md) for the reasoning behind this test scope.
+Unit tests: rule evaluator (including nested-path resolution), JWT/refresh-token rotation and reuse detection, graph executor (parallel branches, skip-on-failure, conditional branching). Integration tests: cross-tenant access denial, CSRF regression, refresh-token-family revocation. One Playwright e2e test covers the core login→build→run journey. See **docs/FINAL_SMOKE_TEST.md** for the full manual regression script covering every feature, run before any deployment.
+
+## Honest known gaps
+
+Prometheus/Grafana metrics, email-based invitation delivery, notification free-text @mention parsing (mentions are supported via structured rule-action config, not @name text parsing), form file-upload fields not wired to real storage, cron scheduler is in-process (a backend restart can miss a run due exactly during the restart window, not queued for later). Full list with reasoning: **docs/TRADEOFFS.md**.
