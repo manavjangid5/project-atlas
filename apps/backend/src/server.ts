@@ -12,7 +12,7 @@ import { doubleCsrfProtection, generateCsrfToken } from "./interfaces/http/middl
 import { errorHandler } from "./interfaces/http/middleware/errorHandler";
 import passport from "./infrastructure/auth/passport";
 import { initSocketServer } from "./infrastructure/realtime/socketServer";
-import { startKeepAlive } from "./infrastructure/keepAlive";
+// import { startKeepAlive } from "./infrastructure/keepAlive";
 
 import healthRouter from "./interfaces/http/routes/health";
 import authRouter from "./interfaces/http/routes/auth";
@@ -131,5 +131,5 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 4000;
 const server = app.listen(PORT, () => console.log(`Backend running on port ${PORT}`));
 initSocketServer(server);
-startKeepAlive();
+// startKeepAlive();
 loadScheduledWorkflows();
